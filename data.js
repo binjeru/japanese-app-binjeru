@@ -1,0 +1,127 @@
+// Kana-Daten: [Hiragana, Romaji]. Katakana wird per Unicode-Offset (+0x60) abgeleitet.
+const KANA_GROUPS = [
+  { id: "basic", name: "Grundzeichen", rows: [
+    [["あ","a"],["い","i"],["う","u"],["え","e"],["お","o"]],
+    [["か","ka"],["き","ki"],["く","ku"],["け","ke"],["こ","ko"]],
+    [["さ","sa"],["し","shi"],["す","su"],["せ","se"],["そ","so"]],
+    [["た","ta"],["ち","chi"],["つ","tsu"],["て","te"],["と","to"]],
+    [["な","na"],["に","ni"],["ぬ","nu"],["ね","ne"],["の","no"]],
+    [["は","ha"],["ひ","hi"],["ふ","fu"],["へ","he"],["ほ","ho"]],
+    [["ま","ma"],["み","mi"],["む","mu"],["め","me"],["も","mo"]],
+    [["や","ya"],null,["ゆ","yu"],null,["よ","yo"]],
+    [["ら","ra"],["り","ri"],["る","ru"],["れ","re"],["ろ","ro"]],
+    [["わ","wa"],null,null,null,["を","wo"]],
+    [["ん","n"],null,null,null,null],
+  ]},
+  { id: "dakuten", name: "Dakuten", rows: [
+    [["が","ga"],["ぎ","gi"],["ぐ","gu"],["げ","ge"],["ご","go"]],
+    [["ざ","za"],["じ","ji"],["ず","zu"],["ぜ","ze"],["ぞ","zo"]],
+    [["だ","da"],["ぢ","ji"],["づ","zu"],["で","de"],["ど","do"]],
+    [["ば","ba"],["び","bi"],["ぶ","bu"],["べ","be"],["ぼ","bo"]],
+    [["ぱ","pa"],["ぴ","pi"],["ぷ","pu"],["ぺ","pe"],["ぽ","po"]],
+  ]},
+  { id: "yoon", name: "Yōon", rows: [
+    [["きゃ","kya"],["きゅ","kyu"],["きょ","kyo"]],
+    [["しゃ","sha"],["しゅ","shu"],["しょ","sho"]],
+    [["ちゃ","cha"],["ちゅ","chu"],["ちょ","cho"]],
+    [["にゃ","nya"],["にゅ","nyu"],["にょ","nyo"]],
+    [["ひゃ","hya"],["ひゅ","hyu"],["ひょ","hyo"]],
+    [["みゃ","mya"],["みゅ","myu"],["みょ","myo"]],
+    [["りゃ","rya"],["りゅ","ryu"],["りょ","ryo"]],
+    [["ぎゃ","gya"],["ぎゅ","gyu"],["ぎょ","gyo"]],
+    [["じゃ","ja"],["じゅ","ju"],["じょ","jo"]],
+    [["びゃ","bya"],["びゅ","byu"],["びょ","byo"]],
+    [["ぴゃ","pya"],["ぴゅ","pyu"],["ぴょ","pyo"]],
+  ]},
+];
+
+function toKatakana(str) {
+  return [...str].map(c => {
+    const code = c.charCodeAt(0);
+    return code >= 0x3041 && code <= 0x3096 ? String.fromCharCode(code + 0x60) : c;
+  }).join("");
+}
+
+// Vokabeln: kana, kanji (optional), romaji, deutsch, kategorie
+const VOCAB = [
+  // Begrüßungen
+  ["こんにちは", "", "konnichiwa", "Hallo / Guten Tag", "Begrüßungen"],
+  ["おはよう", "", "ohayō", "Guten Morgen", "Begrüßungen"],
+  ["こんばんは", "", "konbanwa", "Guten Abend", "Begrüßungen"],
+  ["さようなら", "", "sayōnara", "Auf Wiedersehen", "Begrüßungen"],
+  ["ありがとう", "", "arigatō", "Danke", "Begrüßungen"],
+  ["すみません", "", "sumimasen", "Entschuldigung", "Begrüßungen"],
+  ["はい", "", "hai", "Ja", "Begrüßungen"],
+  ["いいえ", "", "iie", "Nein", "Begrüßungen"],
+  ["おやすみ", "", "oyasumi", "Gute Nacht", "Begrüßungen"],
+  ["いただきます", "", "itadakimasu", "Guten Appetit (vor dem Essen)", "Begrüßungen"],
+  // Zahlen
+  ["いち", "一", "ichi", "eins", "Zahlen"],
+  ["に", "二", "ni", "zwei", "Zahlen"],
+  ["さん", "三", "san", "drei", "Zahlen"],
+  ["よん", "四", "yon", "vier", "Zahlen"],
+  ["ご", "五", "go", "fünf", "Zahlen"],
+  ["ろく", "六", "roku", "sechs", "Zahlen"],
+  ["なな", "七", "nana", "sieben", "Zahlen"],
+  ["はち", "八", "hachi", "acht", "Zahlen"],
+  ["きゅう", "九", "kyū", "neun", "Zahlen"],
+  ["じゅう", "十", "jū", "zehn", "Zahlen"],
+  ["ひゃく", "百", "hyaku", "hundert", "Zahlen"],
+  ["せん", "千", "sen", "tausend", "Zahlen"],
+  // Menschen
+  ["わたし", "私", "watashi", "ich", "Menschen"],
+  ["ひと", "人", "hito", "Mensch / Person", "Menschen"],
+  ["ともだち", "友達", "tomodachi", "Freund", "Menschen"],
+  ["せんせい", "先生", "sensei", "Lehrer", "Menschen"],
+  ["がくせい", "学生", "gakusei", "Student", "Menschen"],
+  ["こども", "子供", "kodomo", "Kind", "Menschen"],
+  ["かぞく", "家族", "kazoku", "Familie", "Menschen"],
+  ["はは", "母", "haha", "(meine) Mutter", "Menschen"],
+  ["ちち", "父", "chichi", "(mein) Vater", "Menschen"],
+  // Essen & Trinken
+  ["みず", "水", "mizu", "Wasser", "Essen & Trinken"],
+  ["おちゃ", "お茶", "ocha", "Tee", "Essen & Trinken"],
+  ["ごはん", "ご飯", "gohan", "Reis / Mahlzeit", "Essen & Trinken"],
+  ["さかな", "魚", "sakana", "Fisch", "Essen & Trinken"],
+  ["にく", "肉", "niku", "Fleisch", "Essen & Trinken"],
+  ["やさい", "野菜", "yasai", "Gemüse", "Essen & Trinken"],
+  ["たまご", "卵", "tamago", "Ei", "Essen & Trinken"],
+  ["パン", "", "pan", "Brot", "Essen & Trinken"],
+  ["コーヒー", "", "kōhī", "Kaffee", "Essen & Trinken"],
+  ["りんご", "", "ringo", "Apfel", "Essen & Trinken"],
+  // Natur & Zeit
+  ["やま", "山", "yama", "Berg", "Natur & Zeit"],
+  ["かわ", "川", "kawa", "Fluss", "Natur & Zeit"],
+  ["き", "木", "ki", "Baum", "Natur & Zeit"],
+  ["はな", "花", "hana", "Blume", "Natur & Zeit"],
+  ["そら", "空", "sora", "Himmel", "Natur & Zeit"],
+  ["あめ", "雨", "ame", "Regen", "Natur & Zeit"],
+  ["ひ", "日", "hi", "Sonne / Tag", "Natur & Zeit"],
+  ["つき", "月", "tsuki", "Mond / Monat", "Natur & Zeit"],
+  ["きょう", "今日", "kyō", "heute", "Natur & Zeit"],
+  ["あした", "明日", "ashita", "morgen", "Natur & Zeit"],
+  ["きのう", "昨日", "kinō", "gestern", "Natur & Zeit"],
+  // Verben
+  ["たべる", "食べる", "taberu", "essen", "Verben"],
+  ["のむ", "飲む", "nomu", "trinken", "Verben"],
+  ["いく", "行く", "iku", "gehen", "Verben"],
+  ["くる", "来る", "kuru", "kommen", "Verben"],
+  ["みる", "見る", "miru", "sehen", "Verben"],
+  ["きく", "聞く", "kiku", "hören / fragen", "Verben"],
+  ["はなす", "話す", "hanasu", "sprechen", "Verben"],
+  ["よむ", "読む", "yomu", "lesen", "Verben"],
+  ["かく", "書く", "kaku", "schreiben", "Verben"],
+  ["ねる", "寝る", "neru", "schlafen", "Verben"],
+  ["する", "", "suru", "machen / tun", "Verben"],
+  // Adjektive
+  ["おおきい", "大きい", "ōkii", "groß", "Adjektive"],
+  ["ちいさい", "小さい", "chiisai", "klein", "Adjektive"],
+  ["あたらしい", "新しい", "atarashii", "neu", "Adjektive"],
+  ["ふるい", "古い", "furui", "alt (Dinge)", "Adjektive"],
+  ["おいしい", "", "oishii", "lecker", "Adjektive"],
+  ["たかい", "高い", "takai", "hoch / teuer", "Adjektive"],
+  ["やすい", "安い", "yasui", "billig", "Adjektive"],
+  ["あつい", "暑い", "atsui", "heiß (Wetter)", "Adjektive"],
+  ["さむい", "寒い", "samui", "kalt (Wetter)", "Adjektive"],
+  ["きれい", "", "kirei", "schön / sauber", "Adjektive"],
+].map(([kana, kanji, romaji, de, cat], i) => ({ id: i, kana, kanji, romaji, de, cat }));
