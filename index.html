@@ -15,6 +15,7 @@
       <button data-view="kanaquiz">Kana-Quiz</button>
       <button data-view="cards">Karteikarten</button>
       <button data-view="vocabquiz">Vokabel-Quiz</button>
+      <button data-view="stories">Geschichten</button>
     </nav>
   </header>
 
@@ -29,6 +30,7 @@
         <button class="feature" data-goto="kanaquiz"><span class="f-icon">ア</span><b>Kana-Quiz</b><span>Zeichen erkennen – Auswahl oder Eintippen</span></button>
         <button class="feature" data-goto="cards"><span class="f-icon">語</span><b>Karteikarten</b><span>Vokabeln mit Lernboxen wiederholen</span></button>
         <button class="feature" data-goto="vocabquiz"><span class="f-icon">？</span><b>Vokabel-Quiz</b><span>Bedeutungen abfragen</span></button>
+        <button class="feature" data-goto="stories"><span class="f-icon">話</span><b>Geschichten</b><span>Kurze Geschichten hören und mitlesen</span></button>
       </div>
       <button class="link-btn" id="reset-progress">Fortschritt zurücksetzen</button>
     </section>
@@ -147,9 +149,44 @@
       </div>
       <div class="panel hidden" id="vq-result"></div>
     </section>
+
+    <!-- Geschichten -->
+    <section id="view-stories" class="view">
+      <h1>物語 <small>Geschichten</small></h1>
+      <p class="lead">Kurze Geschichten für Einsteiger zum Anhören und Mitlesen. Klicke auf ein Wort, um es zu übersetzen.</p>
+      <div class="cards-grid" id="st-list"></div>
+
+      <div class="panel story-panel hidden" id="st-reader">
+        <button class="secondary" id="st-back">← Alle Geschichten</button>
+        <h2 id="st-title"></h2>
+        <div class="st-controls">
+          <button id="st-prev" title="Vorheriger Satz (←)" aria-label="Vorheriger Satz">⏮</button>
+          <button id="st-play" class="play" title="Abspielen / Pause (Leertaste)" aria-label="Abspielen">▶</button>
+          <button id="st-next" title="Nächster Satz (→)" aria-label="Nächster Satz">⏭</button>
+          <button id="st-stop" title="Stopp, zurück zum Anfang" aria-label="Stopp">⏹</button>
+          <div class="segmented" id="st-speed">
+            <button data-v="0.6">Langsam</button>
+            <button data-v="0.85" class="active">Normal</button>
+            <button data-v="1.05">Schnell</button>
+          </div>
+        </div>
+        <div class="checks st-toggles">
+          <label><input type="checkbox" id="st-furi" checked> Furigana</label>
+          <label><input type="checkbox" id="st-romaji"> Romaji</label>
+          <label><input type="checkbox" id="st-de"> Deutsch</label>
+        </div>
+        <p class="hint st-voice-hint hidden" id="st-voice-hint"></p>
+        <ol class="st-text" id="st-text"></ol>
+        <p class="hint">Wort anklicken = Übersetzung · <span class="legend-deck">gepunktet</span> = schon in deinen Karteikarten · Leertaste = Play/Pause · ←/→ = Satz wechseln</p>
+      </div>
+    </section>
   </main>
 
+  <div class="word-pop hidden" id="word-pop" role="dialog" aria-label="Wort-Übersetzung"></div>
+  <div class="toast" id="toast" role="status"></div>
+
   <script src="data.js"></script>
+  <script src="stories.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -25,7 +25,8 @@ function weightedPick(items, weightFn) {
 
 // ---------- Speicher ----------
 const STORE_KEY = "binjeru-v1";
-const defaultState = () => ({ kana: {}, vocab: {}, days: [], answered: 0, correct: 0 });
+// custom: aus Geschichten übernommene Vokabeln, storiesDone: Indizes fertig gehörter Geschichten
+const defaultState = () => ({ kana: {}, vocab: {}, days: [], answered: 0, correct: 0, custom: [], storiesDone: [], stPrefs: {} });
 let state;
 try {
   state = Object.assign(defaultState(), JSON.parse(localStorage.getItem(STORE_KEY)) || {});
@@ -61,19 +62,23 @@ let jaVoice = null;
 function loadVoice() {
   if (!("speechSynthesis" in window)) return;
   jaVoice = speechSynthesis.getVoices().find(v => v.lang && v.lang.toLowerCase().startsWith("ja")) || null;
+  updateVoiceHint();
 }
 if ("speechSynthesis" in window) {
   loadVoice();
   speechSynthesis.onvoiceschanged = loadVoice;
 }
-function speak(text) {
-  if (!("speechSynthesis" in window)) return;
-  speechSynthesis.cancel();
+function makeUtterance(text, rate = 0.85) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "ja-JP";
   if (jaVoice) u.voice = jaVoice;
-  u.rate = 0.85;
-  speechSynthesis.speak(u);
+  u.rate = rate;
+  return u;
+}
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(makeUtterance(text));
 }
 
 // ---------- Kana ----------
@@ -122,6 +127,9 @@ function showView(name) {
   if (name === "home") renderHome();
   if (name === "table") renderTable();
   if (name === "cards") nextCard();
+  closeWordPop();
+  if (name === "stories") { if (!st) renderStoryList(); }
+  else pauseStory();
   window.scrollTo(0, 0);
 }
 $$("#tabs button").forEach(b => b.addEventListener("click", () => showView(b.dataset.view)));
@@ -159,7 +167,8 @@ function renderHome() {
 }
 $("#reset-progress").addEventListener("click", () => {
   if (!confirm("Wirklich den gesamten Lernfortschritt löschen?")) return;
-  state = defaultState();
+  // Aus Geschichten übernommene Vokabeln bleiben erhalten, nur ihr Lernstand wird zurückgesetzt
+  state = Object.assign(defaultState(), { custom: state.custom, stPrefs: state.stPrefs });
   save();
   renderHome();
 });
@@ -323,11 +332,22 @@ function showKanaResult() {
 }
 
 // ---------- Kategorien ----------
-const CATEGORIES = [...new Set(VOCAB.map(v => v.cat))];
-const catOptions = `<option value="">Alle Kategorien</option>` +
-  CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join("");
-$("#fc-cat").innerHTML = catOptions;
-$("#vq-cat").innerHTML = catOptions;
+const STORY_CAT = "Aus Geschichten";
+const addToVocab = e => VOCAB.push({ id: `s-${e.kana}`, kana: e.kana, kanji: e.kanji, romaji: e.romaji, de: e.de, cat: STORY_CAT });
+state.custom.forEach(addToVocab);
+const deckHas = kana => VOCAB.some(v => v.kana === kana);
+
+function renderCategoryOptions() {
+  const cats = [...new Set(VOCAB.map(v => v.cat))];
+  const html = `<option value="">Alle Kategorien</option>` +
+    cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+  for (const sel of [$("#fc-cat"), $("#vq-cat")]) {
+    const prev = sel.value;
+    sel.innerHTML = html;
+    sel.value = cats.includes(prev) ? prev : "";
+  }
+}
+renderCategoryOptions();
 const vocabIn = cat => VOCAB.filter(v => !cat || v.cat === cat);
 const jpMain = v => v.kanji || v.kana;
 
@@ -417,14 +437,14 @@ $("#vq-choices").addEventListener("click", e => {
   const btn = e.target.closest("button");
   if (!btn || vq.answered) return;
   const q = vq.questions[vq.i];
-  const ok = Number(btn.dataset.id) === q.id;
+  const ok = btn.dataset.id === String(q.id);
   vq.answered = true;
   recordAnswer(ok);
   if (ok) vq.score++;
   else vq.missed.push(q);
   $$("#vq-choices button").forEach(b => {
     b.disabled = true;
-    if (Number(b.dataset.id) === q.id) b.classList.add("correct");
+    if (b.dataset.id === String(q.id)) b.classList.add("correct");
   });
   if (!ok) btn.classList.add("wrong");
   if (vq.dir === "de") speak(q.kana);
@@ -455,10 +475,284 @@ $("#vq-next").addEventListener("click", () => {
   $("#vq-settings").onclick = () => { el.classList.add("hidden"); $("#vq-setup").classList.remove("hidden"); };
 });
 
+// ---------- Geschichten ----------
+const isKanji = s => /[一-龯]/.test(s);
+const PUNCT_ROMAJI = { "。": ".", "、": ",", "！": "!", "？": "?" };
+const stPrefs = Object.assign({ furi: true, romaji: false, de: false, speed: "0.85" }, state.stPrefs);
+let st = null; // { i, story, sentences, idx, playing, ended, run, utter }
+
+function saveStPrefs() { state.stPrefs = stPrefs; save(); }
+
+function updateVoiceHint() {
+  const el = document.getElementById("st-voice-hint");
+  if (!el) return;
+  let msg = "";
+  if (!("speechSynthesis" in window)) msg = "Dein Browser unterstützt keine Sprachausgabe – du kannst die Geschichten aber trotzdem lesen.";
+  else if (!jaVoice) msg = "Keine japanische Stimme gefunden. Unter Windows: Einstellungen → Zeit und Sprache → Sprache → Japanisch hinzufügen (mit Sprachausgabe). In Edge und Chrome sind meist schon Stimmen dabei.";
+  el.textContent = msg;
+  el.classList.toggle("hidden", !msg);
+}
+
+// Eintrag, der beim Import in die Karteikarten landet (bei gebeugten Formen die Grundform)
+function cardEntry(key) {
+  const baseKey = DICT[key].base || key;
+  const b = DICT[baseKey];
+  return { kana: b.r, kanji: b.k || (isKanji(baseKey) ? baseKey : ""), romaji: b.ro, de: b.de };
+}
+
+function parseSentence(s) {
+  const tokens = s.jp.split("|");
+  let pos = 0;
+  const offsets = tokens.map(t => { const o = pos; pos += t.length; return o; });
+  return { tokens, offsets, text: tokens.join(""), de: s.de };
+}
+
+function romajiLine(tokens) {
+  const line = tokens.map(t => DICT[t] ? DICT[t].ro : PUNCT_ROMAJI[t] || t).join(" ").replace(/ ([.,!?])/g, "$1");
+  return line.charAt(0).toUpperCase() + line.slice(1);
+}
+
+function tokenHtml(t, si, ti) {
+  const w = DICT[t];
+  if (!w) return `<span class="st-punct">${escapeHtml(t)}</span>`;
+  const inner = isKanji(t) ? `<ruby>${t}<rt>${w.r}</rt></ruby>` : t;
+  return `<span class="tok" tabindex="0" data-k="${t}" data-si="${si}" data-ti="${ti}">${inner}</span>`;
+}
+
+function renderStoryList() {
+  pauseStory();
+  st = null;
+  $("#st-reader").classList.add("hidden");
+  $("#st-list").classList.remove("hidden");
+  $("#st-list").innerHTML = STORIES.map((s, i) => `
+    <button class="feature story-card" data-story="${i}">
+      <span class="f-icon">${s.icon}</span>
+      <b><span class="jp-title">${s.title}</span> <small>${escapeHtml(s.titleDe)}</small></b>
+      <span>${s.level} · ${s.sentences.length} Sätze${state.storiesDone.includes(i) ? " · ✓ gehört" : ""}</span>
+    </button>`).join("");
+}
+$("#st-list").addEventListener("click", e => {
+  const card = e.target.closest("[data-story]");
+  if (card) openStory(Number(card.dataset.story));
+});
+$("#st-back").addEventListener("click", () => { closeWordPop(); renderStoryList(); window.scrollTo(0, 0); });
+
+function openStory(i) {
+  const story = STORIES[i];
+  st = { i, story, sentences: story.sentences.map(parseSentence), idx: 0, playing: false, ended: false, run: 0, utter: null };
+  $("#st-list").classList.add("hidden");
+  $("#st-reader").classList.remove("hidden");
+  $("#st-title").innerHTML = `<span class="jp-title">${story.title}</span> <small>${escapeHtml(story.titleDe)}</small>`;
+  $("#st-text").innerHTML = st.sentences.map((s, si) => `
+    <li class="st-sent" data-si="${si}">
+      <button class="st-say" data-si="${si}" title="Nur diesen Satz anhören" aria-label="Satz ${si + 1} anhören">▶</button>
+      <div class="st-body">
+        <p class="st-jp">${s.tokens.map((t, ti) => tokenHtml(t, si, ti)).join("")}</p>
+        <p class="st-ro">${escapeHtml(romajiLine(s.tokens))}</p>
+        <p class="st-de">${escapeHtml(s.de)}</p>
+      </div>
+    </li>`).join("");
+  applyStPrefs();
+  markDeckWords();
+  setCurrent(0);
+  updatePlayBtn();
+  updateVoiceHint();
+  window.scrollTo(0, 0);
+}
+
+function markDeckWords() {
+  $$("#st-text .tok").forEach(t => t.classList.toggle("in-deck", deckHas(cardEntry(t.dataset.k).kana)));
+}
+
+// Anzeige-Optionen
+function applyStPrefs() {
+  const text = $("#st-text");
+  text.classList.toggle("no-furi", !stPrefs.furi);
+  text.classList.toggle("show-ro", stPrefs.romaji);
+  text.classList.toggle("show-de", stPrefs.de);
+}
+const stToggles = { "st-furi": "furi", "st-romaji": "romaji", "st-de": "de" };
+for (const [id, key] of Object.entries(stToggles)) {
+  const box = $(`#${id}`);
+  box.checked = stPrefs[key];
+  box.addEventListener("change", () => { stPrefs[key] = box.checked; saveStPrefs(); applyStPrefs(); });
+}
+$$("#st-speed button").forEach(b => b.classList.toggle("active", b.dataset.v === stPrefs.speed));
+const stSpeed = segmented("st-speed", () => { stPrefs.speed = stSpeed(); saveStPrefs(); });
+
+// Wiedergabe: Satz für Satz, damit Pause/Weiter zuverlässig funktioniert
+function setCurrent(i) {
+  st.idx = i;
+  $$("#st-text .st-sent").forEach((li, n) => li.classList.toggle("current", n === i));
+}
+function highlightToken(si, charIndex) {
+  $$("#st-text .tok.speaking").forEach(t => t.classList.remove("speaking"));
+  if (si < 0) return;
+  const { offsets } = st.sentences[si];
+  let ti = 0;
+  while (ti + 1 < offsets.length && offsets[ti + 1] <= charIndex) ti++;
+  const tok = $(`#st-text .tok[data-si="${si}"][data-ti="${ti}"]`);
+  if (tok) tok.classList.add("speaking");
+}
+function updatePlayBtn() {
+  const btn = $("#st-play");
+  const playing = st && st.playing;
+  btn.textContent = playing ? "⏸" : "▶";
+  btn.setAttribute("aria-label", playing ? "Pause" : "Abspielen");
+}
+
+function playSentence(i, continueAfter) {
+  if (!("speechSynthesis" in window)) return;
+  const run = ++st.run;
+  speechSynthesis.cancel();
+  st.playing = true;
+  st.ended = false;
+  setCurrent(i);
+  updatePlayBtn();
+  $(`#st-text .st-sent[data-si="${i}"]`).scrollIntoView({ block: "nearest", behavior: "smooth" });
+  const u = makeUtterance(st.sentences[i].text, Number(stPrefs.speed));
+  u.onboundary = e => { if (run === st.run) highlightToken(i, e.charIndex); };
+  u.onend = () => {
+    if (!st || run !== st.run) return;
+    highlightToken(-1);
+    if (continueAfter && i + 1 < st.sentences.length) {
+      setTimeout(() => { if (st && run === st.run && st.playing) playSentence(i + 1, true); }, 450);
+      return;
+    }
+    if (continueAfter) {
+      st.ended = true;
+      if (!state.storiesDone.includes(st.i)) { state.storiesDone.push(st.i); save(); }
+    }
+    st.playing = false;
+    updatePlayBtn();
+  };
+  st.utter = u; // Referenz halten, sonst feuert onend in Chrome manchmal nicht
+  speechSynthesis.speak(u);
+}
+function pauseStory() {
+  if (!st) return;
+  st.run++;
+  st.playing = false;
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  highlightToken(-1);
+  updatePlayBtn();
+}
+function togglePlay() {
+  if (st.playing) pauseStory();
+  else playSentence(st.ended ? 0 : st.idx, true);
+}
+function stepSentence(d) {
+  const i = Math.max(0, Math.min(st.sentences.length - 1, st.idx + d));
+  st.ended = false;
+  if (st.playing) playSentence(i, true);
+  else setCurrent(i);
+}
+$("#st-play").addEventListener("click", togglePlay);
+$("#st-prev").addEventListener("click", () => stepSentence(-1));
+$("#st-next").addEventListener("click", () => stepSentence(1));
+$("#st-stop").addEventListener("click", () => { pauseStory(); st.ended = false; setCurrent(0); });
+
+$("#st-text").addEventListener("click", e => {
+  const say = e.target.closest(".st-say");
+  if (say) { closeWordPop(); playSentence(Number(say.dataset.si), false); return; }
+  const tok = e.target.closest(".tok");
+  if (tok) { e.stopPropagation(); openWordPop(tok); }
+});
+
+// Wort-Popup
+const pop = $("#word-pop");
+let popKey = null;
+function openWordPop(tok) {
+  if (st.playing) pauseStory();
+  const key = tok.dataset.k;
+  const w = DICT[key];
+  popKey = key;
+  $$("#st-text .tok.selected").forEach(t => t.classList.remove("selected"));
+  tok.classList.add("selected");
+  const base = w.base ? DICT[w.base] : null;
+  const baseLabel = base ? (base.k ? `${base.k}（${base.r}）` : base.r) : "";
+  pop.innerHTML = `
+    <button class="pop-close" data-act="close" aria-label="Schließen">×</button>
+    ${w.tag ? `<div class="pop-tag">${w.tag}</div>` : ""}
+    <div class="pop-word">${key}</div>
+    ${w.r !== key ? `<div class="pop-kana">${w.r}</div>` : ""}
+    <div class="pop-ro">${w.ro}</div>
+    <div class="pop-de">${escapeHtml(w.de)}</div>
+    ${base ? `<div class="pop-base">Grundform: <b>${baseLabel}</b> ${base.ro} – ${escapeHtml(base.de)}</div>` : ""}
+    <div class="pop-actions">
+      <button class="secondary" data-act="say">🔊 Anhören</button>
+      <button class="primary" data-act="add"></button>
+    </div>`;
+  updateAddBtn();
+  pop.classList.remove("hidden");
+  // Unter dem Wort platzieren, notfalls darüber; innerhalb des Fensters halten
+  const r = tok.getBoundingClientRect();
+  const pw = pop.offsetWidth, ph = pop.offsetHeight;
+  const left = Math.max(12, Math.min(r.left + r.width / 2 - pw / 2, document.documentElement.clientWidth - pw - 12));
+  let top = r.bottom + 8;
+  if (top + ph > innerHeight - 12 && r.top - ph - 8 > 12) top = r.top - ph - 8;
+  pop.style.left = `${left + scrollX}px`;
+  pop.style.top = `${top + scrollY}px`;
+  speak(w.say || w.r);
+}
+function updateAddBtn() {
+  const entry = cardEntry(popKey);
+  const inDeck = deckHas(entry.kana);
+  const btn = $('[data-act="add"]', pop);
+  btn.disabled = inDeck;
+  btn.textContent = inDeck ? "✓ In Karteikarten" : `+ Karteikarte${DICT[popKey].base ? " (Grundform)" : ""}`;
+}
+function closeWordPop() {
+  pop.classList.add("hidden");
+  popKey = null;
+  $$("#st-text .tok.selected").forEach(t => t.classList.remove("selected"));
+}
+pop.addEventListener("click", e => {
+  const act = e.target.closest("[data-act]");
+  if (!act || !popKey) return;
+  const w = DICT[popKey];
+  if (act.dataset.act === "close") closeWordPop();
+  else if (act.dataset.act === "say") speak(w.say || w.r);
+  else if (act.dataset.act === "add") {
+    const entry = cardEntry(popKey);
+    if (deckHas(entry.kana)) return;
+    state.custom.push(entry);
+    save();
+    addToVocab(entry);
+    renderCategoryOptions();
+    markDeckWords();
+    updateAddBtn();
+    toast(`„${entry.kanji || entry.kana}“ zu den Karteikarten hinzugefügt`);
+  }
+});
+document.addEventListener("click", e => {
+  if (!pop.classList.contains("hidden") && !pop.contains(e.target) && !e.target.closest(".tok")) closeWordPop();
+});
+
+let toastTimer;
+function toast(msg) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
 // ---------- Tastatur ----------
 document.addEventListener("keydown", e => {
   if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.ctrlKey || e.metaKey || e.altKey) return;
   const active = $(".view.active").id;
+
+  if (active === "view-stories") {
+    if (e.key === "Escape") { closeWordPop(); return; }
+    if (!st) return;
+    if (e.target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
+    if (e.key === " ") { e.preventDefault(); togglePlay(); }
+    else if (e.key === "ArrowRight") { e.preventDefault(); stepSentence(1); }
+    else if (e.key === "ArrowLeft") { e.preventDefault(); stepSentence(-1); }
+    else if (e.key === "Enter" && e.target.classList.contains("tok")) openWordPop(e.target);
+    return;
+  }
 
   if (active === "view-cards") {
     if (e.key === " ") { e.preventDefault(); flipCard(); }
