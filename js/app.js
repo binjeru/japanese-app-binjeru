@@ -504,6 +504,7 @@ RENDER.profile = () => {
         <button class="secondary" data-act="export">Sicherung herunterladen</button>
         <label class="secondary file-btn">Sicherung laden<input type="file" accept=".json,application/json" id="import-file" hidden></label>
         <button class="secondary danger" data-act="reset">Alles zurücksetzen</button>
+        <a class="secondary" href="werkstatt.html">工房 Werkstatt (neue Geschichten)</a>
         <a class="secondary" href="tests.html" target="_blank" rel="noopener">Tests ausführen</a>
       </div>
     </div>

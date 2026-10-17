@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Binjeru Werkstatt</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 1200px; }
+    .ws-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+    .ws-col > .panel { max-width: none; }
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; margin-bottom: 14px; }
+    .meta-grid label, .insp label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; font-weight: 600; }
+    .meta-grid .wide { grid-column: 1 / -1; }
+    textarea.source { min-height: 220px; font-family: var(--jp); font-size: 1.05rem; line-height: 1.8; }
+    .status-line { display: flex; gap: 8px 18px; flex-wrap: wrap; font-size: .9rem; margin: 0 0 8px; }
+    .status-line .bad { color: var(--bad); font-weight: 600; } .status-line .ok { color: var(--good); font-weight: 600; }
+    .w-scene { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
+    .w-scene-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .w-scene-head input { flex: 1; font-family: var(--jp); }
+    .w-sent { display: grid; grid-template-columns: 34px 1fr; gap: 4px 8px; padding: 8px 0; border-bottom: 1px dashed var(--border); }
+    .w-num { color: var(--muted); font-size: .8rem; padding-top: 8px; text-align: right; }
+    .w-toks { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+    .chip-w { font-family: var(--jp); font-size: 1.15rem; border: 1px solid var(--border); background: var(--bg); border-radius: 7px; padding: 1px 6px; cursor: pointer; line-height: 1.6; color: var(--text); }
+    .chip-w:hover { border-color: var(--accent); }
+    .chip-w.new { border-color: var(--good); }
+    .chip-w.missing { border-color: var(--bad); background: var(--bad-soft); }
+    .chip-w.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .chip-w.punct { border: 0; background: none; cursor: default; padding: 0 1px; color: var(--muted); }
+    .w-de { grid-column: 2; width: 100%; font-size: .92rem; min-height: 0; }
+    .w-de.missing { border-color: var(--bad); }
+    .insp { position: sticky; top: 76px; }
+    .insp h3 { display: flex; align-items: center; gap: 8px; }
+    .insp .big { font-family: var(--jp); font-size: 2rem; line-height: 1.6; }
+    .insp label { margin-bottom: 8px; }
+    .insp .row { margin-top: 6px; }
+    .insp .secondary { font-size: .85rem; padding: 6px 10px; }
+    .badge { font-size: .7rem; font-weight: 600; border-radius: 6px; padding: 2px 7px; text-transform: uppercase; letter-spacing: .04em; }
+    .badge.old { background: var(--bg); color: var(--muted); } .badge.new { background: var(--good-soft); color: var(--good); }
+    .export-out { min-height: 260px; font-family: ui-monospace, Consolas, monospace; font-size: .8rem; white-space: pre; }
+    .loading { color: var(--saved); }
+    @media (max-width: 900px) { .ws-layout { grid-template-columns: 1fr; } .insp { position: static; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-jp">工房</span> Binjeru Werkstatt</div>
+    <nav class="tabs"><a class="secondary" href="index.html">← Zur App</a></nav>
+  </header>
+  <main>
+    <h1>工房 <small>Werkstatt – neue Geschichten aufbereiten</small></h1>
+    <p class="lead" id="w-status">Lade Wörterbuch und Wortzerlegung …</p>
+
+    <div class="ws-layout">
+      <div class="ws-col">
+        <div class="panel">
+          <h2>1 · Text</h2>
+          <div class="meta-grid">
+            <label>ID (Dateiname, nur a–z, 0–9)<input class="text-input" id="m-id" placeholder="z. B. kaguya"></label>
+            <label>Titel japanisch<input class="text-input" id="m-titleJp" placeholder="かぐやひめ"></label>
+            <label>Titel deutsch<input class="text-input" id="m-titleDe" placeholder="Die Mondprinzessin"></label>
+            <label>Niveau<input class="text-input" id="m-level" placeholder="N5 / N4 / N3 · Originaltext"></label>
+            <label>Thema<input class="text-input" id="m-genre" placeholder="Märchen"></label>
+            <label>Kachel-Kanji<input class="text-input" id="m-icon" placeholder="月" maxlength="2"></label>
+            <label class="wide">Beschreibung<input class="text-input" id="m-description" placeholder="Worum geht es? (1–2 Sätze)"></label>
+            <label class="wide">Quelle / Lizenz<input class="text-input" id="m-source" placeholder="z. B. Aozora Bunko Nr. …, gemeinfrei · oder: Eigene Geschichte"></label>
+          </div>
+          <label class="hint" for="w-text">Japanischer Text. Eine Zeile, die mit <b>#</b> beginnt, startet eine neue Szene (z. B. <code># 竹取の翁 – Der Bambussammler</code>). Ruby im Aozora-Format (漢字《かんじ》) wird entfernt.</label>
+          <textarea class="text-input source" id="w-text" placeholder="# 第一場面 – Erste Szene&#10;むかしむかし、あるところに…"></textarea>
+          <div class="row">
+            <button class="primary" id="w-analyze" disabled>Text zerlegen</button>
+            <button class="secondary" id="w-reset">Entwurf verwerfen</button>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="w-review">
+          <h2>2 · Prüfen</h2>
+          <p class="hint">Klick auf ein Wort öffnet rechts die Details. <span style="color:var(--good)">Grün</span> = neues Wort, <span style="color:var(--bad)">rot</span> = Bedeutung fehlt. Darunter jeweils die deutsche Übersetzung des Satzes.</p>
+          <div class="status-line" id="w-stats"></div>
+          <div id="w-scenes"></div>
+        </div>
+
+        <div class="panel hidden" id="w-export">
+          <h2>3 · Export</h2>
+          <p class="hint">Erzeugt die Datei für <code>data/stories/</code> und den Eintrag für den Katalog. Danach: Datei speichern, Katalogeintrag in <code>data/stories/index.js</code> einfügen, Datei in <code>tests.html</code> einbinden, Tests laufen lassen – oder beides Claude geben.</p>
+          <div class="row"><button class="primary" id="w-build">Dateien erzeugen</button></div>
+          <div id="w-out" class="hidden">
+            <h3 id="w-file-name">Geschichte</h3>
+            <textarea class="text-input export-out" id="w-file" readonly></textarea>
+            <div class="row"><button class="secondary" data-copy="w-file">Kopieren</button><button class="secondary" id="w-download">Herunterladen</button></div>
+            <h3>Katalogeintrag für data/stories/index.js</h3>
+            <textarea class="text-input export-out" id="w-catalog" readonly style="min-height:150px"></textarea>
+            <div class="row"><button class="secondary" data-copy="w-catalog">Kopieren</button></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel insp hidden" id="w-insp"></aside>
+    </div>
+  </main>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="data/kana.js"></script>
+  <script src="data/dictionary.js"></script>
+  <script src="data/stories/index.js"></script>
+  <script src="js/util.js"></script>
+  <script src="js/content.js"></script>
+  <!-- Wortzerlegung (nur für die Werkstatt, nicht für die App): kuromoji.js, Apache-2.0, Wörterbuch IPAdic -->
+  <script src="https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js"></script>
+  <!-- Deutsche Bedeutungen als Vorschläge: JMdict (EDRDG, CC BY-SA 4.0), erzeugt mit tools/build-jmdict-de.ps1 -->
+  <script src="data/werkstatt/jmdict-de.js"></script>
+  <script src="js/werkstatt.js"></script>
+</body>
+</html>

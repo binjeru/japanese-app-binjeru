@@ -52,8 +52,20 @@ js/app.js        Navigation und übrige Ansichten
 - **Kanji-Daten** (`data/kanji.js`): [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) der EDRDG, CC BY-SA 4.0 – Heisig-Nummern der 6. Auflage (2200 Zeichen, entspricht der deutschen Ausgabe bei Klostermann), Strichzahl, Lesungen.
 - **Strichfolgen** (`data/strokes/`): [KanjiVG](https://kanjivg.tagaini.net) von Ulrich Apel, CC BY-SA 3.0.
   Kanji-Daten und Strichfolgen werden mit `tools/build-kanji.ps1` erzeugt; für diese Dateien gilt die jeweilige Share-Alike-Lizenz.
+- **Bedeutungsvorschläge in der Werkstatt** (`data/werkstatt/jmdict-de.js`): deutsche Glossen aus [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) der EDRDG, CC BY-SA 4.0, erzeugt mit `tools/build-jmdict-de.ps1`. Wird nur von der Werkstatt geladen, nicht von der App.
 - **Geschichten:** eigene Texte und Nacherzählungen gemeinfreier Märchen (z. B. Momotarō). 「手袋を買いに」 von 新美南吉 (Niimi Nankichi, 1913–1943) stammt aus [Aozora Bunko](https://www.aozora.gr.jp/cards/000121/card637.html) (gemeinfrei) und ist ungekürzt übernommen; Wortzerlegung und deutsche Übersetzung sind eigene Arbeit.
 - Heisigs Schlüsselwörter und Geschichten sind urheberrechtlich geschützt und nicht enthalten.
+
+## Werkstatt: neue Geschichten aufbereiten
+
+`werkstatt.html` (Link auch im Profil) macht aus einem japanischen Text eine fertige Geschichtsdatei:
+
+1. Angaben zur Geschichte eintragen und den Text einfügen. Eine Zeile mit `#` am Anfang startet eine neue Szene; Ruby im Aozora-Format (`漢字《かんじ》`) wird als Lesung übernommen und dann entfernt.
+2. **Text zerlegen:** Die Wortzerlegung übernimmt [kuromoji.js](https://github.com/takuyaa/kuromoji.js) (Apache-2.0, wird vom CDN geladen – Internetverbindung nötig). Verbformen werden zu lernfreundlichen Einheiten zusammengefasst (行き+まし+た → 行きました mit Grundform 行く); Ausdrücke, die schon im Wörterbuch stehen, werden wiederverwendet; für neue Wörter schlägt die Werkstatt deutsche Bedeutungen aus JMdict vor (bitte prüfen – JMdict deckt nicht alle Wörter ab und ist manchmal knapp).
+3. **Prüfen:** Wort anklicken → Lesung, Grundform, Bedeutung, Wortart, Hinweis bearbeiten; Wörter verbinden/teilen, Sätze teilen/verbinden; zu jedem Satz die deutsche Übersetzung eintragen. Rot markiert, was noch fehlt. Der Entwurf wird im Browser gespeichert.
+4. **Exportieren:** erzeugt `data/stories/<id>.js` und den Katalogeintrag für `data/stories/index.js`. Datei einbinden wie unten beschrieben.
+
+Am besten über den lokalen Server öffnen: `powershell -ExecutionPolicy Bypass -File tools/serve.ps1`, dann http://localhost:8123/werkstatt.html.
 
 ## Geschichten hinzufügen
 
