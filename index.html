@@ -2,191 +2,118 @@
 <html lang="de">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Binjeru – Japanisch lernen</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Monogatari – Japanisch mit Geschichten</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="brand-jp">日本語</span> Binjeru</div>
+    <div class="brand"><span class="brand-jp">物語</span> Monogatari</div>
     <nav class="tabs" id="tabs">
-      <button data-view="home" class="active">Start</button>
-      <button data-view="table">Kana-Tabelle</button>
-      <button data-view="kanaquiz">Kana-Quiz</button>
-      <button data-view="cards">Karteikarten</button>
-      <button data-view="vocabquiz">Vokabel-Quiz</button>
-      <button data-view="stories">Geschichten</button>
+      <button data-view="today"><span class="ti">今</span>Heute</button>
+      <button data-view="library"><span class="ti">話</span>Geschichten</button>
+      <button data-view="saved"><span class="ti">栞</span>Merkliste</button>
+      <button data-view="deck"><span class="ti">札</span>Lernkartei</button>
+      <button data-view="profile"><span class="ti">私</span>Profil</button>
     </nav>
   </header>
 
   <main>
-    <!-- Start -->
-    <section id="view-home" class="view active">
-      <h1>ようこそ! <small>Willkommen</small></h1>
-      <p class="lead">Lerne Hiragana, Katakana und erste Vokabeln. Dein Fortschritt wird im Browser gespeichert.</p>
-      <div class="stats" id="stats"></div>
-      <div class="cards-grid">
-        <button class="feature" data-goto="table"><span class="f-icon">あ</span><b>Kana-Tabelle</b><span>Alle Zeichen ansehen und anhören</span></button>
-        <button class="feature" data-goto="kanaquiz"><span class="f-icon">ア</span><b>Kana-Quiz</b><span>Zeichen erkennen – Auswahl oder Eintippen</span></button>
-        <button class="feature" data-goto="cards"><span class="f-icon">語</span><b>Karteikarten</b><span>Vokabeln mit Lernboxen wiederholen</span></button>
-        <button class="feature" data-goto="vocabquiz"><span class="f-icon">？</span><b>Vokabel-Quiz</b><span>Bedeutungen abfragen</span></button>
-        <button class="feature" data-goto="stories"><span class="f-icon">話</span><b>Geschichten</b><span>Kurze Geschichten hören und mitlesen</span></button>
-      </div>
-      <button class="link-btn" id="reset-progress">Fortschritt zurücksetzen</button>
+    <section id="view-today" class="view">
+      <h1>今日 <small>Heute</small></h1>
+      <div id="today"></div>
     </section>
 
-    <!-- Kana-Tabelle -->
-    <section id="view-table" class="view">
-      <div class="toolbar">
-        <div class="segmented" id="table-script">
-          <button data-script="hira" class="active">Hiragana</button>
-          <button data-script="kata">Katakana</button>
-        </div>
-        <span class="hint">Klicke auf ein Zeichen, um es zu hören. Die Farbe zeigt deinen Lernstand.</span>
-      </div>
-      <div id="kana-table"></div>
-    </section>
-
-    <!-- Kana-Quiz -->
-    <section id="view-kanaquiz" class="view">
-      <div class="panel" id="kq-setup">
-        <h2>Kana-Quiz</h2>
-        <div class="field">
-          <label>Schrift</label>
-          <div class="segmented" id="kq-script">
-            <button data-v="hira" class="active">Hiragana</button>
-            <button data-v="kata">Katakana</button>
-            <button data-v="both">Beide</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Zeichengruppen</label>
-          <div class="checks" id="kq-groups"></div>
-        </div>
-        <div class="field">
-          <label>Modus</label>
-          <div class="segmented" id="kq-mode">
-            <button data-v="choice" class="active">Auswahl</button>
-            <button data-v="type">Romaji eintippen</button>
-            <button data-v="reverse">Romaji → Kana</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>Anzahl Fragen</label>
-          <div class="segmented" id="kq-count">
-            <button data-v="10">10</button>
-            <button data-v="20" class="active">20</button>
-            <button data-v="50">50</button>
-          </div>
-        </div>
-        <button class="primary" id="kq-start">Quiz starten</button>
-      </div>
-
-      <div class="panel hidden" id="kq-play">
-        <div class="progress"><div class="progress-bar" id="kq-bar"></div></div>
-        <div class="quiz-meta"><span id="kq-pos"></span><span id="kq-score"></span></div>
-        <div class="big-char" id="kq-question"></div>
-        <div class="choices" id="kq-choices"></div>
-        <form id="kq-form" class="type-form hidden" autocomplete="off">
-          <input id="kq-input" type="text" placeholder="z. B. ka" autocapitalize="off" spellcheck="false">
-          <button class="primary" type="submit">Prüfen</button>
-        </form>
-        <div class="feedback" id="kq-feedback"></div>
-        <button class="primary hidden" id="kq-next">Weiter ⏎</button>
-      </div>
-
-      <div class="panel hidden" id="kq-result"></div>
-    </section>
-
-    <!-- Karteikarten -->
-    <section id="view-cards" class="view">
-      <div class="toolbar">
-        <select id="fc-cat"></select>
-        <div class="segmented" id="fc-dir">
-          <button data-v="jp" class="active">Japanisch → Deutsch</button>
-          <button data-v="de">Deutsch → Japanisch</button>
-        </div>
-      </div>
-      <div class="boxes" id="fc-boxes"></div>
-      <div class="flashcard" id="flashcard" tabindex="0">
-        <div class="fc-inner">
-          <div class="fc-face fc-front" id="fc-front"></div>
-          <div class="fc-face fc-back" id="fc-back"></div>
-        </div>
-      </div>
-      <p class="hint center">Karte anklicken oder Leertaste zum Umdrehen</p>
-      <div class="fc-actions">
-        <button class="bad" id="fc-wrong">✗ Nicht gewusst <kbd>1</kbd></button>
-        <button class="speak" id="fc-speak">🔊 Anhören</button>
-        <button class="good" id="fc-right">✓ Gewusst <kbd>2</kbd></button>
-      </div>
-    </section>
-
-    <!-- Vokabel-Quiz -->
-    <section id="view-vocabquiz" class="view">
-      <div class="panel" id="vq-setup">
-        <h2>Vokabel-Quiz</h2>
-        <div class="field">
-          <label>Kategorie</label>
-          <select id="vq-cat"></select>
-        </div>
-        <div class="field">
-          <label>Richtung</label>
-          <div class="segmented" id="vq-dir">
-            <button data-v="jp" class="active">Japanisch → Deutsch</button>
-            <button data-v="de">Deutsch → Japanisch</button>
-          </div>
-        </div>
-        <button class="primary" id="vq-start">Quiz starten</button>
-      </div>
-      <div class="panel hidden" id="vq-play">
-        <div class="progress"><div class="progress-bar" id="vq-bar"></div></div>
-        <div class="quiz-meta"><span id="vq-pos"></span><span id="vq-score"></span></div>
-        <div class="vq-question" id="vq-question"></div>
-        <div class="choices wide" id="vq-choices"></div>
-        <div class="feedback" id="vq-feedback"></div>
-        <button class="primary hidden" id="vq-next">Weiter ⏎</button>
-      </div>
-      <div class="panel hidden" id="vq-result"></div>
-    </section>
-
-    <!-- Geschichten -->
-    <section id="view-stories" class="view">
+    <section id="view-library" class="view">
       <h1>物語 <small>Geschichten</small></h1>
-      <p class="lead">Kurze Geschichten für Einsteiger zum Anhören und Mitlesen. Klicke auf ein Wort, um es zu übersetzen.</p>
-      <div class="cards-grid" id="st-list"></div>
+      <p class="lead">Hör eine Geschichte ruhig mehrmals – über Tage hinweg verstehst du immer mehr.</p>
+      <div class="library" id="library"></div>
+    </section>
 
-      <div class="panel story-panel hidden" id="st-reader">
-        <button class="secondary" id="st-back">← Alle Geschichten</button>
-        <h2 id="st-title"></h2>
-        <div class="st-controls">
-          <button id="st-prev" title="Vorheriger Satz (←)" aria-label="Vorheriger Satz">⏮</button>
-          <button id="st-play" class="play" title="Abspielen / Pause (Leertaste)" aria-label="Abspielen">▶</button>
-          <button id="st-next" title="Nächster Satz (→)" aria-label="Nächster Satz">⏭</button>
-          <button id="st-stop" title="Stopp, zurück zum Anfang" aria-label="Stopp">⏹</button>
-          <div class="segmented" id="st-speed">
-            <button data-v="0.6">Langsam</button>
-            <button data-v="0.85" class="active">Normal</button>
-            <button data-v="1.05">Schnell</button>
-          </div>
+    <section id="view-player" class="view">
+      <div class="panel player" id="player"></div>
+    </section>
+
+    <section id="view-check" class="view">
+      <h1>確認 <small>Wortschatz-Check</small></h1>
+      <div class="panel check" id="check"></div>
+    </section>
+
+    <section id="view-saved" class="view">
+      <h1>栞 <small>Merkliste</small></h1>
+      <p class="lead">Wörter sammeln kostet nichts – erst beim Aktivieren werden sie zu Lernkarten.</p>
+      <div id="saved"></div>
+    </section>
+
+    <section id="view-deck" class="view">
+      <h1>札 <small>Lernkartei</small></h1>
+      <div id="deck"></div>
+    </section>
+
+    <section id="view-profile" class="view">
+      <h1>私 <small>Lernprofil</small></h1>
+      <div id="profile"></div>
+    </section>
+
+    <section id="view-kana" class="view">
+      <h1>仮名 <small>Kana üben</small></h1>
+      <div class="toolbar">
+        <button class="secondary" data-goto="profile">← Profil</button>
+        <div class="segmented" id="kana-mode"><button data-v="table">Tabelle</button><button data-v="quiz">Quiz</button></div>
+      </div>
+      <div id="kana-table-wrap">
+        <div class="toolbar">
+          <div class="segmented" id="table-script"><button data-v="hira">Hiragana</button><button data-v="kata">Katakana</button></div>
+          <span class="hint">Klicke auf ein Zeichen, um es zu hören. Die Farbe zeigt deinen Lernstand.</span>
         </div>
-        <div class="checks st-toggles">
-          <label><input type="checkbox" id="st-furi" checked> Furigana</label>
-          <label><input type="checkbox" id="st-romaji"> Romaji</label>
-          <label><input type="checkbox" id="st-de"> Deutsch</label>
+        <div id="kana-table"></div>
+      </div>
+      <div id="kana-quiz-wrap" class="hidden">
+        <div class="panel narrow" id="kq-setup">
+          <h2>Kana-Quiz</h2>
+          <div class="field"><label>Schrift</label>
+            <div class="segmented" id="kq-script"><button data-v="hira">Hiragana</button><button data-v="kata">Katakana</button><button data-v="both">Beide</button></div></div>
+          <div class="field"><label>Zeichengruppen</label><div class="checks" id="kq-groups"></div></div>
+          <div class="field"><label>Modus</label>
+            <div class="segmented" id="kq-mode"><button data-v="choice">Auswahl</button><button data-v="type">Romaji eintippen</button><button data-v="reverse">Romaji → Kana</button></div></div>
+          <div class="field"><label>Anzahl Fragen</label>
+            <div class="segmented" id="kq-count"><button data-v="10">10</button><button data-v="20">20</button><button data-v="50">50</button></div></div>
+          <button class="primary" id="kq-start">Quiz starten</button>
         </div>
-        <p class="hint st-voice-hint hidden" id="st-voice-hint"></p>
-        <ol class="st-text" id="st-text"></ol>
-        <p class="hint">Wort anklicken = Übersetzung · <span class="legend-deck">gepunktet</span> = schon in deinen Karteikarten · Leertaste = Play/Pause · ←/→ = Satz wechseln</p>
+        <div class="panel narrow hidden" id="kq-play">
+          <div class="progress"><div class="progress-bar" id="kq-bar"></div></div>
+          <div class="quiz-meta"><span id="kq-pos"></span><span id="kq-score"></span></div>
+          <div class="big-char" id="kq-question"></div>
+          <div class="choices" id="kq-choices"></div>
+          <form id="kq-form" class="type-form hidden" autocomplete="off">
+            <input id="kq-input" type="text" placeholder="z. B. ka" autocapitalize="off" spellcheck="false">
+            <button class="primary" type="submit">Prüfen</button>
+          </form>
+          <div class="feedback" id="kq-feedback"></div>
+          <button class="primary hidden" id="kq-next">Weiter ⏎</button>
+        </div>
+        <div class="panel narrow hidden" id="kq-result"></div>
       </div>
     </section>
   </main>
 
-  <div class="word-pop hidden" id="word-pop" role="dialog" aria-label="Wort-Übersetzung"></div>
+  <div class="sheet-backdrop" id="sheet-backdrop"></div>
+  <div class="sheet" id="word-sheet" role="dialog" aria-label="Wortdetails"></div>
   <div class="toast" id="toast" role="status"></div>
 
-  <script src="data.js"></script>
-  <script src="stories.js"></script>
-  <script src="app.js"></script>
+  <!-- Inhalte -->
+  <script src="data/kana.js"></script>
+  <script src="data/dictionary.js"></script>
+  <script src="data/stories.js"></script>
+  <!-- Logik (ohne UI) -->
+  <script src="js/util.js"></script>
+  <script src="js/content.js"></script>
+  <script src="js/scheduler.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/speech.js"></script>
+  <!-- Oberfläche -->
+  <script src="js/player.js"></script>
+  <script src="js/kana.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>
