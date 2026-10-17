@@ -281,8 +281,9 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .box4-help { font-size: .78rem; color: var(--muted); margin-top: 4px; }
 .box4-words { font-size: .95rem; margin-top: 8px; line-height: 1.7; word-break: keep-all; }
 .session-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; max-width: 640px; margin-left: auto; margin-right: auto; }
-.flash { max-width: 640px; margin: 0 auto; text-align: center; position: relative; padding-top: 40px; }
-.box-tag { position: absolute; top: 14px; left: 16px; margin: 0; color: var(--text); }
+.flash { max-width: 640px; margin: 0 auto; text-align: center; }
+/* Fach-Markierung klein oben links, als eigene Zeile, damit sie auf schmalen Bildschirmen nichts überdeckt */
+.box-tag { display: block; width: fit-content; margin: -8px auto 12px 0; color: var(--text); font-size: .62rem; padding: 1px 7px; }
 .box-tag.box4-1 { background: var(--b1); } .box-tag.box4-2 { background: var(--b2); }
 .box-tag.box4-3 { background: var(--b3); } .box-tag.box4-4 { background: var(--b4); } .box-tag.box4-5 { background: var(--b5); }
 .flash-word { font-size: 3.4rem; line-height: 1.6; }
