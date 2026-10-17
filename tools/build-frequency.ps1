@@ -17,9 +17,11 @@ foreach ($w in $lines) {
   if (-not $rank.ContainsKey($w)) { $rank[$w] = $n }
 }
 
-# Grundformen aus dem Wörterbuch lesen (Einträge ohne base:)
+# Grundformen aus dem Wörterbuch und den dict-Abschnitten der Geschichten lesen (Einträge ohne base:)
+$files = @(Join-Path $root "data\dictionary.js") + @(Get-ChildItem (Join-Path $root "data\stories") -Filter *.js | ForEach-Object { $_.FullName })
+$dictLines = $files | ForEach-Object { Get-Content -Encoding UTF8 $_ }
 $out = [ordered]@{}
-foreach ($line in Get-Content -Encoding UTF8 (Join-Path $root "data\dictionary.js")) {
+foreach ($line in $dictLines) {
   if ($line -notmatch '^\s*"([^"]+)":\s*\{(.*)\},?\s*$') { continue }
   $key = $Matches[1]; $body = $Matches[2]
   if ($body -match 'base:') { continue }
@@ -43,4 +45,4 @@ $body
 };
 "@
 [IO.File]::WriteAllText((Join-Path $root "data\frequency.js"), $js + "`n", (New-Object Text.UTF8Encoding $false))
-"{0} Wörter mit Rang, {1} ohne Treffer" -f $out.Count, (@(Get-Content -Encoding UTF8 (Join-Path $root "data\dictionary.js") | Where-Object { $_ -match '^\s*"[^"]+":\s*\{' -and $_ -notmatch 'base:' }).Count - $out.Count)
+"{0} Wörter mit Rang, {1} ohne Treffer" -f $out.Count, (@($dictLines | Where-Object { $_ -match '^\s*"[^"]+":\s*\{' -and $_ -notmatch 'base:' }).Count - $out.Count)

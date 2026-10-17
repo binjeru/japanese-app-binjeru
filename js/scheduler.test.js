@@ -113,7 +113,7 @@ test("Romaji-Umschrift", () => {
 
 test("Alle Wörter der Geschichten sind im Wörterbuch", () => {
   for (const story of Content.stories) for (const s of story.flat) s.tokens.forEach((t, i) => {
-    if (!/^[。、「」！？…\s]+$/.test(t)) {
+    if (!/^[。、「」！？…―\s]+$/.test(t)) {
       if (!DICT[t]) throw new Error(`fehlt: ${t} (${s.id})`);
       if (!DICT[s.vocabIds[i]]) throw new Error(`Grundform fehlt: ${s.vocabIds[i]}`);
     }
@@ -131,6 +131,38 @@ test("Häufigkeitsrang: häufige Wörter vor seltenen, Wörter ohne Rang zuletzt
   eq(Content.rank("約束"), FREQ_RANK["約束"]);
   const sorted = ["秘密", "ドイツ人", "人", "約束"].sort(Content.byRank);
   eq(sorted[0], "人"); eq(sorted[sorted.length - 1], "ドイツ人");
+});
+
+test("Geschichten aus einzelnen Dateien: Katalog vollständig geladen, eigene Wörter ergänzt", () => {
+  eq(Content.stories.length, Content.catalog.length);
+  eq(Content.story("momotaro").scenes.length, 5);
+  eq(DICT["鬼"].r, "おに", "Wort aus dem dict-Abschnitt");
+  eq(DICT["犬"].r, "いぬ", "Kana-Grundform übernommen"); eq(DICT["犬"].de, DICT["いぬ"].de);
+  eq(Content.storyIdOf("momotaro/2/3"), "momotaro");
+});
+
+test("Jede Geschichte kommt mit dem gemeinsamen Wörterbuch und ihrem eigenen dict aus", () => {
+  for (const story of Content.stories) {
+    const allowed = new Set([...BASE_DICT_KEYS, ...story.dictKeys]);
+    const check = (k, where) => { if (!allowed.has(k)) throw new Error(`${story.id}: „${k}“ fehlt (${where})`); };
+    for (const s of story.flat) s.tokens.forEach((t, i) => {
+      if (/^[。、「」！？…―\s]+$/.test(t)) return;
+      check(t, s.id); check(s.vocabIds[i], `Grundform in ${s.id}`);
+    });
+    for (const k of story.dictKeys) if (DICT[k].base) check(DICT[k].base, `base von ${k}`);
+  }
+});
+
+test("Abdeckung: Anteil bekannter Wörter im Text (ohne Partikel und Namen)", () => {
+  const none = Content.coverage("neko", () => "unknown");
+  eq(none.pct, 0);
+  const all = Content.coverage("neko", () => "known");
+  eq(all.pct, 100); eq(all.unknownWords, 0);
+  const story = Content.story("neko");
+  const someVid = Object.keys(story.freq).find(Content.isLearnable);
+  const one = Content.coverage("neko", v => (v === someVid ? "active" : v === "ねこ" ? "saved" : "unknown"));
+  const total = Object.entries(story.freq).filter(([v]) => Content.isLearnable(v)).reduce((n, [, c]) => n + c, 0);
+  eq(one.pct, Math.round((story.freq[someVid] / total) * 100), "aktive Karten zählen als bekannt, gemerkte nicht");
 });
 
 // ---------- Kanji (Heisig) ----------

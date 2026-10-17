@@ -48,7 +48,8 @@ const estMinutes = story => Math.max(1, Math.round(story.flat.reduce((n, s) => n
 // ---------- Heute ----------
 RENDER.today = () => {
   const now = Date.now();
-  const story = Content.story(Store.db.currentStoryId) || Content.stories[0];
+  const story = Content.story(Store.db.currentStoryId) || Content.story(Content.catalog[0].id);
+  if (!story) { Content.load(Content.catalog[0].id).then(() => currentView === "today" && RENDER.today()); return; }
   const prog = Store.progress(story.id);
   const due = Store.dueQueue(now).length;
   const gate = due === 0;
@@ -110,19 +111,27 @@ RENDER.library = () => {
   const due = Store.dueQueue().length;
   $("#library").innerHTML = (due ? `
     <div class="panel gate-note">🔒 Zuerst die Tagesabfrage (${due} ${due === 1 ? "Karte" : "Karten"}), dann geht's mit den Geschichten weiter.
-      <button class="primary" data-goto-session>Tagesabfrage starten</button></div>` : "") + Content.stories.map(s => {
-    const p = Store.progress(s.id);
+      <button class="primary" data-goto-session>Tagesabfrage starten</button></div>` : "") + Content.catalog.map(m => {
+    const s = Content.story(m.id); // null, solange noch nicht geladen
+    const p = Store.progress(m.id);
+    const cov = s && Content.coverage(m.id, Store.status);
+    const covCls = !cov ? "" : cov.pct >= 90 ? "high" : cov.pct >= 60 ? "mid" : "low";
     return `
-      <button class="story-card" data-open-story="${s.id}">
-        <div class="story-art small">${s.icon}</div>
+      <button class="story-card" data-open-story="${m.id}">
+        <div class="story-art small">${m.icon}</div>
         <div class="story-card-body">
-          <b><span class="jp">${s.titleJp}</span> <small>${escapeHtml(s.titleDe)}</small></b>
-          <span class="desc">${escapeHtml(s.description)}</span>
-          <span class="meta">${escapeHtml(s.level)} · ${escapeHtml(s.genre)} · ${s.scenes.length} ${s.scenes.length === 1 ? "Szene" : "Szenen"} · ca. ${estMinutes(s)} Min.${p.listenCount ? ` · ${p.listenCount}× gehört` : ""}</span>
-          ${p.position > 0 ? `<div class="progress"><div class="progress-bar" style="width:${(p.position / s.flat.length) * 100}%"></div></div>` : ""}
+          <b><span class="jp">${m.titleJp}</span> <small>${escapeHtml(m.titleDe)}</small></b>
+          <span class="desc">${escapeHtml(m.description)}</span>
+          <span class="meta">${escapeHtml(m.level)} · ${escapeHtml(m.genre)}${s ? ` · ${s.scenes.length} ${s.scenes.length === 1 ? "Szene" : "Szenen"} · ca. ${estMinutes(s)} Min.` : ""}${p.listenCount ? ` · ${p.listenCount}× gehört` : ""}</span>
+          ${cov ? `<span class="coverage ${covCls}" title="Anteil der Wörter im Text, die du kennst oder in der Lernkartei hast (ohne Partikel und Namen)">
+            <span class="coverage-bar"><span style="width:${cov.pct}%"></span></span>
+            Du kennst ${cov.pct} % der Wörter${cov.unknownWords ? ` · ${cov.unknownWords} neue` : ""}</span>` : `<span class="meta">wird geladen …</span>`}
+          ${s && p.position > 0 ? `<div class="progress"><div class="progress-bar" style="width:${(p.position / s.flat.length) * 100}%"></div></div>` : ""}
         </div>
       </button>`;
   }).join("");
+  // Fehlende Geschichten im Hintergrund laden, dann Abdeckung anzeigen
+  if (Content.stories.length < Content.catalog.length) Content.loadAll().then(() => currentView === "library" && RENDER.library());
 };
 
 // ---------- Merkliste ----------
@@ -209,16 +218,18 @@ const Check = (() => {
   let C = null; // { storyId, list, i, revealed, known, saved }
 
   function start(storyId) {
-    const list = Content.storyVocab(storyId).filter(v => Store.status(v) === "unknown");
-    C = { storyId, list, i: 0, revealed: false, known: 0, saved: 0 };
-    showView("check");
+    Content.load(storyId).then(() => {
+      const list = Content.storyVocab(storyId).filter(v => Store.status(v) === "unknown");
+      C = { storyId, list, i: 0, revealed: false, known: 0, saved: 0 };
+      showView("check");
+    }).catch(e => toast(e.message));
   }
 
   function render() {
     const el = $("#check");
     if (!C) {
       el.innerHTML = `<h2>Wortschatz-Check</h2><p class="hint">Wähle eine Geschichte:</p>
-        <div class="row wrap">${Content.stories.map(s => `<button class="secondary" data-check="${s.id}"><span class="jp">${s.titleJp}</span></button>`).join("")}</div>`;
+        <div class="row wrap">${Content.catalog.map(s => `<button class="secondary" data-check="${s.id}"><span class="jp">${s.titleJp}</span></button>`).join("")}</div>`;
       return;
     }
     const story = Content.story(C.storyId);
@@ -454,6 +465,7 @@ const Deck = (() => {
 const TOPICS = ["Märchen", "Mystery", "Alltag", "Kultur", "Natur", "Humor", "Reisen", "Essen"];
 RENDER.profile = () => {
   const db = Store.db;
+  if (Content.stories.length < Content.catalog.length) Content.loadAll().then(() => currentView === "profile" && RENDER.profile());
   const allVocab = [...new Set(Content.stories.flatMap(s => Content.storyVocab(s.id)))];
   const count = st => allVocab.filter(v => Store.status(v) === st).length;
   const good = db.reviews.filter(r => r.rating === "good").length;
@@ -549,4 +561,9 @@ document.addEventListener("keydown", e => {
 });
 
 // ---------- Start ----------
-showView("today");
+// Nur die Geschichten laden, die der Lernstand gerade braucht (aktuelle Geschichte, Karten, Merkliste)
+Content.ensure([
+  Store.db.currentStoryId || Content.catalog[0].id,
+  ...Store.db.cards.map(c => Content.storyIdOf(c.sentenceId)),
+  ...Store.db.saved.map(s => Content.storyIdOf(s.sentenceId)),
+]).then(() => showView("today"));

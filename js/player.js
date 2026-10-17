@@ -16,8 +16,12 @@ const Player = (() => {
       showView("deck");
       return;
     }
+    Content.load(storyId).then(story => openLoaded(story, position)).catch(e => toast(e.message));
+  }
+
+  function openLoaded(story, position) {
+    const storyId = story.id;
     pause();
-    const story = Content.story(storyId);
     let idx = position != null ? position : Store.progress(storyId).position;
     if (!(idx >= 0 && idx < story.flat.length)) idx = 0;
     P = { story, idx, scene: -1, playing: false, ended: false, run: 0, started: false, peek: false };

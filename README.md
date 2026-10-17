@@ -52,9 +52,17 @@ js/app.js        Navigation und übrige Ansichten
 - **Kanji-Daten** (`data/kanji.js`): [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) der EDRDG, CC BY-SA 4.0 – Heisig-Nummern der 6. Auflage (2200 Zeichen, entspricht der deutschen Ausgabe bei Klostermann), Strichzahl, Lesungen.
 - **Strichfolgen** (`data/strokes/`): [KanjiVG](https://kanjivg.tagaini.net) von Ulrich Apel, CC BY-SA 3.0.
   Kanji-Daten und Strichfolgen werden mit `tools/build-kanji.ps1` erzeugt; für diese Dateien gilt die jeweilige Share-Alike-Lizenz.
+- **Geschichten:** eigene Texte und Nacherzählungen gemeinfreier Märchen (z. B. Momotarō). 「手袋を買いに」 von 新美南吉 (Niimi Nankichi, 1913–1943) stammt aus [Aozora Bunko](https://www.aozora.gr.jp/cards/000121/card637.html) (gemeinfrei) und ist ungekürzt übernommen; Wortzerlegung und deutsche Übersetzung sind eigene Arbeit.
 - Heisigs Schlüsselwörter und Geschichten sind urheberrechtlich geschützt und nicht enthalten.
 
 ## Geschichten hinzufügen
 
-In `data/stories.js` eine Geschichte mit Szenen ergänzen. Wörter im Satz werden mit `|` getrennt (vorbereitete Wortsegmente), z. B. `"手紙|に|は|「|秘密|の|約束|」|と|書いて|ありました|。"`.
-Jedes Wort braucht einen Eintrag in `data/dictionary.js` – gebeugte Formen zeigen mit `base` auf ihre Grundform. `tests.html` meldet fehlende Einträge.
+Jede Geschichte ist eine eigene Datei und wird erst geladen, wenn sie gebraucht wird:
+
+1. Metadaten (Titel, Beschreibung, Niveau, Thema, Quelle) in `data/stories/index.js` eintragen.
+2. Den Text als `data/stories/<id>.js` anlegen: `Content.register({ id, scenes: [...], dict: {...} })`.
+   Wörter im Satz werden mit `|` getrennt (vorbereitete Wortsegmente), z. B. `"手紙|に|は|「|秘密|の|約束|」|と|書いて|ありました|。"`.
+3. Jedes Wort braucht einen Wörterbucheintrag – entweder im gemeinsamen `data/dictionary.js` oder im `dict`-Abschnitt der Geschichte (siehe `momotaro.js`). Gebeugte Formen zeigen mit `base` auf ihre Grundform.
+4. Die Datei in `tests.html` einbinden; die Tests melden fehlende Einträge. Danach `tools/build-frequency.ps1` laufen lassen, damit neue Wörter einen Häufigkeitsrang bekommen.
+
+Die Bibliothek zeigt zu jeder Geschichte, welcher Anteil der Wörter schon bekannt ist oder in der Lernkartei liegt.

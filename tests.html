@@ -16,10 +16,20 @@
   <div id="out"></div>
   <script src="data/kana.js"></script>
   <script src="data/dictionary.js"></script>
-  <script src="data/stories.js"></script>
+  <script src="data/stories/index.js"></script>
   <script src="data/frequency.js"></script>
   <script src="js/util.js"></script>
   <script src="js/content.js"></script>
+  <!-- Wörterbuch vor den Geschichten merken: jede Geschichte muss mit diesem + ihrem eigenen dict auskommen -->
+  <script>const BASE_DICT_KEYS = new Set(Object.keys(DICT));</script>
+  <!-- alle Geschichten direkt laden, damit die Tests sie prüfen können -->
+  <script src="data/stories/himitsu.js"></script>
+  <script src="data/stories/momotaro.js"></script>
+  <script src="data/stories/tebukuro.js"></script>
+  <script src="data/stories/neko.js"></script>
+  <script src="data/stories/kouen.js"></script>
+  <script src="data/stories/asagohan.js"></script>
+  <script src="data/stories/fuji.js"></script>
   <script src="js/scheduler.js"></script>
   <script src="data/kanji.js"></script>
   <script>
