@@ -27,6 +27,13 @@ const Store = (() => {
   db = Object.assign(fresh(), db || {});
   db.prefs = Object.assign(fresh().prefs, db.prefs);
   db.heisig = Object.assign(fresh().heisig, db.heisig);
+  migrateCards();
+
+  // Karten der früheren Version (Lernphasen) auf die 5 Fächer abbilden
+  function migrateCards() {
+    db.cards = db.cards.map(Scheduler.migrate);
+    db.heisig.cards = db.heisig.cards.map(Scheduler.migrate);
+  }
 
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* z. B. privater Modus */ }
@@ -90,13 +97,17 @@ const Store = (() => {
   }
 
   // ---------- Lernkartei ----------
-  const activatedToday = (now = Date.now()) => db.activations[todayStr(now)] || 0;
-  const dueCards = (now = Date.now()) => db.cards.filter(c => Scheduler.isDue(c, now)).sort((a, b) => a.dueAt - b.dueAt);
-  const dueReviewCount = (now = Date.now()) => dueCards(now).filter(c => c.state === "review" || c.state === "relearning").length;
-  function newAllowance(now = Date.now()) {
-    return Math.max(0, Scheduler.suggestedNewCount(dueReviewCount(now)) - activatedToday(now));
-  }
+  const deck = () => ({ cards: db.cards, reviews: db.reviews, activations: db.activations });
+  const activatedToday = (now = Date.now()) => Scheduler.activatedToday(deck(), now);
+  const lapsesToday = (now = Date.now()) => Scheduler.lapsesToday(deck(), now);
+  const dueQueue = (now = Date.now()) => Scheduler.dueQueue(deck(), now);
+  const dueTotal = (now = Date.now()) => Scheduler.dueTotal(deck(), now);
+  const gateOpen = (now = Date.now()) => Scheduler.gateOpen(deck(), now);
+  const practiceCards = (now = Date.now()) => Scheduler.practiceCards(deck(), now);
+  const newAllowance = (now = Date.now()) => Scheduler.allowance(deck(), now, Scheduler.MAX_NEW_PER_DAY);
+
   function activate(vids, now = Date.now()) {
+    if (!gateOpen(now)) return 0; // erst die Tagesabfrage
     const allowed = newAllowance(now);
     let n = 0;
     for (const vid of vids) {
@@ -104,12 +115,13 @@ const Store = (() => {
       const s = savedOf(vid);
       db.cards.push(Scheduler.newCard(vid, s ? s.sentenceId : null, now));
       db.saved = db.saved.filter(x => x.vocabId !== vid);
-      db.activations[todayStr(now)] = activatedToday(now) + 1;
+      db.activations[Scheduler.dayKey(now)] = activatedToday(now) + 1;
       n++;
     }
     persist();
     return n;
   }
+  // Abfrage einer fälligen Karte (verschiebt sie zwischen den Fächern)
   function review(cardId, rating, supportMode, now = Date.now()) {
     const i = db.cards.findIndex(c => c.id === cardId);
     const { card, log } = Scheduler.review(db.cards[i], rating, now);
@@ -118,6 +130,13 @@ const Store = (() => {
     touchDay(now);
     persist();
     return card;
+  }
+  // Freies Üben in Fach 1: wird protokolliert, ändert aber nichts an Fach oder Fälligkeit
+  function practice(cardId, rating, now = Date.now()) {
+    const c = db.cards.find(x => x.id === cardId);
+    db.reviews.push({ id: `r-${db.reviews.length + 1}`, cardId, reviewedAt: now, rating, boxBefore: c.box, boxAfter: c.box, nextDueAt: c.dueAt, practice: true });
+    touchDay(now);
+    persist();
   }
 
   // ---------- Geschichten-Fortschritt ----------
@@ -164,6 +183,7 @@ const Store = (() => {
     if (!data || data.version !== 1 || !Array.isArray(data.cards)) throw new Error("Keine gültige Sicherung");
     db = Object.assign(fresh(), data);
     db.heisig = Object.assign(fresh().heisig, db.heisig);
+    migrateCards();
     persist();
   }
   function reset() {
@@ -176,7 +196,7 @@ const Store = (() => {
   return {
     get db() { return db; }, persist, touchDay,
     status, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
-    activatedToday, dueCards, dueReviewCount, newAllowance, activate, review,
+    activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, activate, review, practice,
     progress, setPosition, startedListening, completed, streak,
     exportJson, importJson, reset,
   };

@@ -10,6 +10,12 @@ const Player = (() => {
   function setMode(mode) { prefs().mode = mode; Store.persist(); modeSeg.set(mode); applyPrefs(); }
 
   function open(storyId, position) {
+    // Wie bei der echten Lernkartei: erst die fälligen Karten, dann die Geschichte
+    if (!Store.gateOpen()) {
+      toast(`Zuerst die Tagesabfrage (${Store.dueQueue().length} fällig) – dann geht's mit der Geschichte weiter.`);
+      showView("deck");
+      return;
+    }
     pause();
     const story = Content.story(storyId);
     let idx = position != null ? position : Store.progress(storyId).position;

@@ -24,6 +24,7 @@ $("#tabs").addEventListener("click", e => {
 document.addEventListener("click", e => {
   const go = e.target.closest("[data-goto]");
   if (go) { showView(go.dataset.goto); return; }
+  if (e.target.closest("[data-goto-session]")) { showView("deck"); Deck.start("due"); return; }
   const open = e.target.closest("[data-open-story]");
   if (open) Player.open(open.dataset.openStory, open.dataset.pos != null ? Number(open.dataset.pos) : undefined);
 });
@@ -49,8 +50,11 @@ RENDER.today = () => {
   const now = Date.now();
   const story = Content.story(Store.db.currentStoryId) || Content.stories[0];
   const prog = Store.progress(story.id);
-  const due = Store.dueCards(now).length;
-  const allowance = Store.newAllowance(now);
+  const due = Store.dueQueue(now).length;
+  const gate = due === 0;
+  const allowance = gate ? Store.newAllowance(now) : 0;
+  const practiceN = Store.practiceCards(now).length;
+  const kanjiDue = Heisig.dueQueue(now).length;
   const savedN = Store.db.saved.length;
   const started = prog.position > 0;
   const recent = [
@@ -59,12 +63,16 @@ RENDER.today = () => {
   ].sort((a, b) => b.t - a.t).slice(0, 8);
 
   let next;
-  if (due) next = `<button class="primary big" data-act="session">Lerneinheit starten · ${due} ${due === 1 ? "Karte" : "Karten"}</button>`;
-  else if (savedN && allowance) next = `<button class="primary big" data-goto="saved">Neue Karten aus der Merkliste wählen</button>`;
-  else next = `<p class="hint">Keine Karten fällig. Hör einfach weiter – die Geschichte ist das Wichtigste.</p>`;
+  if (!gate) next = `
+    <p><b>Zuerst die Tagesabfrage:</b> ${due} ${due === 1 ? "Karte ist" : "Karten sind"} fällig. Danach sind Geschichten und neue Wörter freigeschaltet.</p>
+    <button class="primary big" data-act="session">Tagesabfrage starten · ${due}</button>`;
+  else if (savedN && allowance) next = `<p class="ok-line">✓ Tagesabfrage erledigt</p><button class="primary big" data-goto="saved">Neue Karten aus der Merkliste wählen</button>`;
+  else next = `<p class="ok-line">✓ Tagesabfrage erledigt</p><p class="hint">Hör einfach weiter – die Geschichte ist das Wichtigste.</p>`;
+  if (practiceN) next += `<p class="hint">Fach 1 kannst du heute noch beliebig üben (${practiceN} ${practiceN === 1 ? "Karte" : "Karten"}). <button class="link" data-act="practice">Jetzt üben</button></p>`;
 
   $("#today").innerHTML = `
-    <div class="panel story-hero">
+    <div class="panel today-next">${next}</div>
+    <div class="panel story-hero ${gate ? "" : "locked"}">
       <div class="story-art">${story.icon}</div>
       <div class="story-hero-body">
         <span class="kicker">Aktuelle Geschichte</span>
@@ -72,33 +80,37 @@ RENDER.today = () => {
         <div class="progress"><div class="progress-bar" style="width:${(prog.position / story.flat.length) * 100}%"></div></div>
         <p class="hint">${started ? `Satz ${prog.position + 1} von ${story.flat.length}` : "Noch nicht begonnen"} · ${prog.listenCount}× gehört</p>
         <div class="row">
-          <button class="primary" data-open-story="${story.id}">▶ ${started ? "Weiterhören" : "Anhören"}</button>
+          ${gate ? `<button class="primary" data-open-story="${story.id}">▶ ${started ? "Weiterhören" : "Anhören"}</button>`
+            : `<button class="primary" disabled>🔒 Nach der Tagesabfrage</button>`}
           <button class="secondary" data-goto="library">Andere Geschichte</button>
         </div>
       </div>
     </div>
     <div class="stats">
       <div class="stat"><b>${due}</b><span>Karten fällig</span></div>
-      <div class="stat"><b>${allowance}</b><span>neue Karten heute möglich</span></div>
+      <div class="stat"><b>${gate ? allowance : "–"}</b><span>neue Karten heute möglich</span></div>
       <div class="stat"><b>${savedN}</b><span>Wörter in der Merkliste</span></div>
       <div class="stat"><b>${Store.streak()}</b><span>Lerntage in Folge</span></div>
     </div>
-    <div class="panel today-next">${next}</div>
     <button class="panel today-kanji" data-goto="kanji">
       <span class="jp">漢</span>
-      <span><b>Kanji nach Heisig</b> · Rahmen ${Heisig.unlocked} von ${Heisig.TOTAL}${Heisig.dueCards(now).length ? ` · <b>${Heisig.dueCards(now).length}</b> fällig` : ""}</span>
+      <span><b>Kanji nach Heisig</b> · Rahmen ${Heisig.unlocked} von ${Heisig.TOTAL}${kanjiDue ? ` · <b>${kanjiDue}</b> fällig` : ""}</span>
       <span class="hint">→</span>
     </button>
     ${recent.length ? `<div class="panel"><h3>Zuletzt gelernt & gesammelt</h3><div class="chips">${recent.map(r =>
       `<span class="chip"><span class="jp">${wordHtml(r.vid)}</span> ${escapeHtml(DICT[r.vid].de)} <small>${r.label}</small></span>`).join("")}</div></div>` : ""}`;
 };
 $("#today").addEventListener("click", e => {
-  if (e.target.closest('[data-act="session"]')) { showView("deck"); Deck.start(); }
+  if (e.target.closest('[data-act="session"]')) { showView("deck"); Deck.start("due"); }
+  if (e.target.closest('[data-act="practice"]')) { showView("deck"); Deck.start("practice"); }
 });
 
 // ---------- Bibliothek ----------
 RENDER.library = () => {
-  $("#library").innerHTML = Content.stories.map(s => {
+  const due = Store.dueQueue().length;
+  $("#library").innerHTML = (due ? `
+    <div class="panel gate-note">🔒 Zuerst die Tagesabfrage (${due} ${due === 1 ? "Karte" : "Karten"}), dann geht's mit den Geschichten weiter.
+      <button class="primary" data-goto-session>Tagesabfrage starten</button></div>` : "") + Content.stories.map(s => {
     const p = Store.progress(s.id);
     return `
       <button class="story-card" data-open-story="${s.id}">
@@ -116,14 +128,16 @@ RENDER.library = () => {
 // ---------- Merkliste ----------
 const selected = new Set();
 RENDER.saved = () => {
-  const allowance = Store.newAllowance();
-  const dueReviews = Store.dueReviewCount();
+  const gate = Store.gateOpen();
+  const allowance = gate ? Store.newAllowance() : 0;
+  const lapses = Store.lapsesToday();
   for (const vid of [...selected]) if (!Store.savedOf(vid)) selected.delete(vid);
   // Häufigste Wörter des Japanischen zuerst
   const list = [...Store.db.saved].sort((a, b) => Content.byRank(a.vocabId, b.vocabId) || b.savedAt - a.savedAt);
   let limitText = `Heute kannst du noch <b>${allowance}</b> ${allowance === 1 ? "neue Karte" : "neue Karten"} aktivieren.`;
-  if (allowance < Scheduler.MAX_NEW_PER_DAY - Store.activatedToday() && dueReviews >= 12) limitText += ` Weniger als sonst, weil ${dueReviews} Wiederholungen anstehen.`;
-  if (allowance === 0 && Store.activatedToday() > 0) limitText = "Für heute sind genug neue Karten aktiviert. Morgen geht es weiter.";
+  if (lapses) limitText += ` ${lapses} ${lapses === 1 ? "Platz ist" : "Plätze sind"} schon durch Karten belegt, die heute zurück in Fach 1 gefallen sind.`;
+  if (allowance === 0) limitText = "Für heute ist Fach 1 voll (12 Karten inklusive Rückfälle). Morgen geht es weiter.";
+  if (!gate) limitText = `🔒 Erst die Tagesabfrage erledigen (${Store.dueQueue().length} fällig) – dann kannst du neue Karten aktivieren. <button class="link" data-goto-session>Tagesabfrage starten</button>`;
 
   $("#saved").innerHTML = list.length ? `
     <div class="panel saved-head">
@@ -160,9 +174,10 @@ $("#saved").addEventListener("change", e => {
   const box = e.target.closest("input[data-vid]");
   if (!box) return;
   const vid = box.dataset.vid;
-  if (box.checked && selected.size >= Store.newAllowance()) {
+  const allowance = Store.gateOpen() ? Store.newAllowance() : 0;
+  if (box.checked && selected.size >= allowance) {
     box.checked = false;
-    toast(`Heute sind höchstens ${Store.newAllowance()} neue Karten möglich.`);
+    toast(Store.gateOpen() ? `Heute sind höchstens ${allowance} neue Karten möglich.` : "Erst die Tagesabfrage erledigen.");
     return;
   }
   box.checked ? selected.add(vid) : selected.delete(vid);
@@ -276,23 +291,36 @@ const Check = (() => {
 
 // ---------- Lernkartei ----------
 const Deck = (() => {
-  let S = null; // { queue, current, revealed, done, good, again }
-  const BOX_HELP = ["", "Furigana · Aussprache automatisch", "Furigana · Audio auf Knopfdruck", "ohne Furigana", "Langzeit, ohne Hilfen"];
+  let S = null; // { mode: "due" | "practice", queue, revealed, done, good, again }
+  const BOX_HELP = ["", "täglich · Furigana · Aussprache automatisch", "nach 2 Tagen · Furigana · Audio auf Knopfdruck",
+    "nach 5 Tagen · ohne Furigana", "nach 14 Tagen · ohne Furigana", "nach 35 Tagen, dann alle 90 Tage"];
 
   function renderOverview() {
     const now = Date.now();
-    const due = Store.dueCards(now);
-    const boxes = [1, 2, 3, 4].map(b => Store.db.cards.filter(c => Scheduler.boxOf(c) === b));
+    const due = Store.dueQueue(now);
+    const dueTotal = Store.dueTotal(now);
+    const practice = Store.practiceCards(now);
+    const boxes = [1, 2, 3, 4, 5].map(b => Store.db.cards.filter(c => c.box === b));
     const nextDue = Store.db.cards.filter(c => c.dueAt > now).sort((a, b) => a.dueAt - b.dueAt)[0];
     const allowance = Store.newAllowance(now);
+    const box1Due = due.filter(c => c.box === 1).length;
+    let head;
+    if (due.length) head = `
+      <p><b>Tagesabfrage:</b> ${due.length} ${due.length === 1 ? "Karte" : "Karten"}${box1Due ? ` – zuerst ${box1Due} aus Fach 1` : ""}.
+        Gewusst → ein Fach weiter, nicht gewusst → zurück in Fach 1.</p>
+      <button class="primary big" data-act="start-due">Tagesabfrage starten</button>
+      <p class="hint">Danach sind Geschichten und neue Wörter freigeschaltet.</p>`;
+    else if (dueTotal) head = `<p class="ok-line">✓ Für heute genug abgefragt (${Scheduler.MAX_REVIEWS_PER_DAY} Karten).</p><p class="hint">Die restlichen ${dueTotal} fälligen Karten kommen morgen dran.</p>`;
+    else head = `<p class="ok-line">✓ Tagesabfrage erledigt</p>${nextDue ? `<p class="hint">Nächste Abfrage: <b>${fmtDue(nextDue.dueAt)}</b>.</p>` : ""}`;
     $("#deck").innerHTML = `
       <div class="panel deck-head">
-        ${due.length
-          ? `<p><b>${due.length}</b> ${due.length === 1 ? "Karte ist" : "Karten sind"} fällig.</p><button class="primary big" data-act="start">Lerneinheit starten</button>`
-          : `<p>Keine Karte fällig.${nextDue ? ` Nächste Wiederholung: <b>${fmtDue(nextDue.dueAt)}</b>.` : ""}</p>`}
-        ${Store.db.saved.length && allowance ? `<button class="secondary" data-goto="saved">＋ Neue Karten aus der Merkliste (${allowance} möglich)</button>` : ""}
+        ${head}
+        <div class="row center">
+          ${practice.length ? `<button class="secondary" data-act="start-practice">Fach 1 üben · ${practice.length} (zählt nicht)</button>` : ""}
+          ${!due.length && Store.db.saved.length && allowance ? `<button class="secondary" data-goto="saved">＋ Neue Karten aus der Merkliste (${allowance} frei)</button>` : ""}
+        </div>
       </div>
-      <div class="boxes4">${boxes.map((cards, i) => {
+      <div class="boxes4 boxes5">${boxes.map((cards, i) => {
         const b = i + 1;
         const dueN = cards.filter(c => Scheduler.isDue(c, now)).length;
         return `
@@ -307,10 +335,11 @@ const Deck = (() => {
       ${Store.db.cards.length ? "" : `<p class="hint on-page">Noch keine Karten. Sammle Wörter in den Geschichten und aktiviere bis zu ${Scheduler.MAX_NEW_PER_DAY} pro Tag aus der Merkliste.</p>`}`;
   }
 
-  function start() {
-    const queue = Store.dueCards().map(c => c.id);
-    if (!queue.length) { toast("Gerade ist keine Karte fällig."); return; }
-    S = { queue, revealed: false, done: 0, good: 0, again: 0 };
+  // mode "due": Pflichtabfrage der fälligen Karten · "practice": Fach 1 frei üben (ohne Wirkung)
+  function start(mode = "due") {
+    const cards = mode === "practice" ? shuffle(Store.practiceCards()) : Store.dueQueue();
+    if (!cards.length) { toast(mode === "practice" ? "In Fach 1 ist heute nichts zu üben." : "Gerade ist keine Karte fällig."); renderOverview(); return; }
+    S = { mode, queue: cards.map(c => c.id), revealed: false, done: 0, good: 0, again: 0 };
     renderSession(true);
   }
 
@@ -321,13 +350,19 @@ const Deck = (() => {
   function renderSession(fresh) {
     const el = $("#deck");
     if (!S.queue.length) {
-      const nextDue = Store.db.cards.filter(c => c.dueAt > Date.now()).sort((a, b) => a.dueAt - b.dueAt)[0];
+      const practice = Store.practiceCards().length;
+      const due = S.mode === "due";
       el.innerHTML = `
         <div class="panel center">
-          <h2>お疲れさま！ <small>Gut gemacht</small></h2>
-          <p><b>${S.done}</b> Wiederholungen · ${S.good}× gewusst · ${S.again}× noch nicht</p>
-          ${nextDue ? `<p class="hint">Nächste Wiederholung: ${fmtDue(nextDue.dueAt)}</p>` : ""}
-          <div class="row center"><button class="primary" data-act="close">Fertig</button></div>
+          <h2>お疲れさま！ <small>${due ? "Tagesabfrage erledigt" : "Fach 1 geübt"}</small></h2>
+          <p>${due ? `<b>${S.done}</b> Karten abgefragt · ${S.good}× gewusst · ${S.again}× zurück in Fach 1`
+            : `${S.done} Durchgänge geübt. Ob die Karten in Fach 2 kommen, entscheidet die Abfrage morgen.`}</p>
+          ${due && Store.gateOpen() ? `<p class="ok-line">Geschichten und neue Wörter sind jetzt freigeschaltet.</p>` : ""}
+          <div class="row center">
+            ${due && practice ? `<button class="secondary" data-act="start-practice">Fach 1 üben · ${practice}</button>` : ""}
+            ${due && Store.gateOpen() ? `<button class="secondary" data-goto="library">Zu den Geschichten</button>` : ""}
+            <button class="primary" data-act="close">Fertig</button>
+          </div>
         </div>`;
       return;
     }
@@ -338,8 +373,8 @@ const Deck = (() => {
     const s = sentenceFor(card);
     el.innerHTML = `
       <div class="session-top">
-        <span class="hint on-page">${S.done} erledigt · ${S.queue.length} übrig</span>
-        <button class="link on-page" data-act="end">Einheit beenden</button>
+        <span class="hint on-page"><b>${S.mode === "due" ? "Tagesabfrage" : "Fach 1 üben – zählt nicht"}</b> · ${S.done} erledigt · ${S.queue.length} übrig</span>
+        <button class="link on-page" data-act="end">${S.mode === "due" ? "Unterbrechen" : "Beenden"}</button>
       </div>
       <div class="panel flash ${S.revealed ? "revealed" : ""}">
         <span class="tag box-tag box4-${box}">Fach ${box} · ${Scheduler.BOX_NAMES[box]}</span>
@@ -354,7 +389,7 @@ const Deck = (() => {
         <div class="row center">
           <button class="secondary" data-act="say-word">🔊 Wort</button>
           ${s ? `<button class="secondary" data-act="say-sentence">▶ Satz</button>` : ""}
-          ${S.revealed && s ? `<button class="secondary" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">↗ Zur Geschichte</button>` : ""}
+          ${S.revealed && s && Store.gateOpen() ? `<button class="secondary" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">↗ Zur Geschichte</button>` : ""}
         </div>
         ${S.revealed && s ? `<p class="hint center">Aus <span class="jp">${storyTitle(s.storyId)}</span> · Szene ${s.sceneIndex + 1}</p>` : ""}
         <div class="row center rate-row">
@@ -369,25 +404,33 @@ const Deck = (() => {
 
   function rate(rating) {
     const id = S.queue.shift();
-    const before = Store.db.cards.find(c => c.id === id);
-    const box = Scheduler.boxOf(before);
-    const card = Store.review(id, rating, { furigana: box <= 2, autoAudio: box === 1 });
     S.done++;
     rating === "good" ? S.good++ : S.again++;
-    // Kurzfristig fällige Karten kommen in derselben Einheit nach ein paar anderen wieder
-    if (Scheduler.comesBackInSession(card, Date.now())) S.queue.splice(Math.min(3, S.queue.length), 0, id);
+    if (S.mode === "due") {
+      const box = Store.db.cards.find(c => c.id === id).box;
+      Store.review(id, rating, { furigana: box <= 2, autoAudio: box === 1 });
+    } else {
+      // Üben: nicht gewusste Karten kommen nach ein paar anderen nochmal
+      Store.practice(id, rating);
+      if (rating === "again") S.queue.splice(Math.min(3, S.queue.length), 0, id);
+    }
     S.revealed = false;
     renderSession(true);
   }
 
-  RENDER.deck = () => (S ? renderSession(false) : renderOverview());
+  // Beim Öffnen des Tabs: laufende Einheit fortsetzen, abgeschlossene → Übersicht
+  RENDER.deck = () => {
+    if (S && S.queue.length) renderSession(false);
+    else { S = null; renderOverview(); }
+  };
 
   $("#deck").addEventListener("click", e => {
     const act = e.target.closest("[data-act]");
     if (!act) return;
     const card = S && S.queue.length ? Store.db.cards.find(c => c.id === S.queue[0]) : null;
     switch (act.dataset.act) {
-      case "start": start(); break;
+      case "start-due": start("due"); break;
+      case "start-practice": start("practice"); break;
       case "reveal": S.revealed = true; renderSession(false); break;
       case "again": rate("again"); break;
       case "good": rate("good"); break;

@@ -14,8 +14,8 @@ Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge un
 - **Heute** – aktuelle Geschichte weiterhören, fällige Karten, wie viele neue Karten heute sinnvoll sind
 - **Geschichten** – Bibliothek; Player mit Szenen, Hör- und Lesemodus, Tempo 0,75×/1×/1,25×, Satz wiederholen, Furigana/Romaji/Übersetzung zuschaltbar. Wort antippen → Lesung, Bedeutung, Grundform, Beispielsatz, Aussprache, „Zur Merkliste“
 - **Wortschatz-Check** – nach einer Geschichte: Wort zeigen, überlegen, aufdecken; „Gewusst“ = bekannt, „Nicht gewusst“ = Merkliste
-- **Merkliste** – gesammelte Wörter mit Beispielsatz und Herkunft; höchstens 12 neue Karten pro Tag aktivieren (weniger, wenn viele Wiederholungen anstehen)
-- **Lernkartei** – 4 Fächer: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen* (ohne Furigana), *Langzeit*. Von jeder Karte zurück zur Stelle in der Geschichte
+- **Merkliste** – gesammelte Wörter mit Beispielsatz und Herkunft; nach Häufigkeitsrang sortiert; höchstens 12 Karten pro Tag in Fach 1 (Rückfälle zählen mit)
+- **Lernkartei** – 5 Fächer wie eine echte Lernkartei: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen*, *Vertiefen* (ohne Furigana), *Langzeit*. Jeden Tag zuerst die **Tagesabfrage** – erst danach sind Geschichten und neue Wörter freigeschaltet. Von jeder Karte zurück zur Stelle in der Geschichte
 - **Kanji** – eigenständige Heisig-Kartei („Die Kanji lernen und behalten 1“, 2200 Rahmen): Rahmen strikt in Heisigs Reihenfolge freischalten, eigenes Schlüsselwort und eigene Geschichte eintragen, Strichfolge als Animation; Abfrage vom Schlüsselwort zum Kanji (auf Papier schreiben, dann aufdecken). Neue Rahmen pro Tag einstellbar, bereits Gelerntes übernehmbar. In den Wortdetails der Geschichten steht nur zur Info, welche Rahmen die Kanji eines Wortes haben
 - **Profil** – bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Kana-Übung
 
@@ -37,7 +37,14 @@ js/player.js     Geschichtenplayer + Wortdetails
 js/app.js        Navigation und übrige Ansichten
 ```
 
-**Wiederholungsplanung:** neue Karte sofort → nach „Gewusst“ in 3 Minuten nochmal (gleiche Lerneinheit) → nächster Tag → 3 → 8 → 20 → 50 Tage. „Noch nicht“ holt die Karte in derselben Einheit zurück und halbiert das Intervall. Die Fächer werden aus Lernphase und Intervall abgeleitet; jede Wiederholung wird protokolliert (Grundlage für späteres FSRS).
+**Wiederholungsplanung (Lernkartei mit 5 Fächern):**
+- Neue Karten liegen in Fach 1 und dürfen am selben Tag beliebig oft geübt werden – das zählt nicht.
+- Ab dem nächsten Tag wird bei Fälligkeit abgefragt („do or die“): gewusst → ein Fach weiter, nicht gewusst → zurück in Fach 1.
+- Abstände nach dem Eintritt ins Fach: Fach 1 täglich, Fach 2 nach 2 Tagen, Fach 3 nach 5, Fach 4 nach 14, Fach 5 nach 35 Tagen; in Fach 5 gewusst → bleibt dort, wieder in 90 Tagen (Abstufung ≈ ×2,5 wie bei SuperMemo/Anki).
+- Reihenfolge der Tagesabfrage: Fach 1 zuerst, dann die übrigen; höchstens 50 Karten pro Tag (der Rest kommt am nächsten Tag).
+- Freie Plätze für neue Karten: 12 minus heute aktivierte minus heutige Rückfälle aus Fach 2–5.
+- Die Kanji-Kartei funktioniert genauso (eigenes Tageslimit, sperrt die Geschichten nicht).
+- Jede Abfrage wird protokolliert (Grundlage für einen späteren Algorithmus wie FSRS).
 
 ## Quellen und Lizenzen
 

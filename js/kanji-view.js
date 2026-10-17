@@ -44,11 +44,12 @@ const KanjiView = (() => {
   // ---------- Übersicht ----------
   function renderOverview() {
     const now = Date.now();
-    const due = Heisig.dueCards(now).length;
+    const due = Heisig.dueQueue(now).length;
+    const practice = Heisig.practiceCards(now).length;
     const next = Heisig.nextFrame();
     const allowance = Heisig.newAllowance(now);
     const cards = Store.db.heisig.cards;
-    const boxes = [1, 2, 3, 4].map(b => cards.filter(c => Scheduler.boxOf(c) === b).length);
+    const boxes = [1, 2, 3, 4, 5].map(b => cards.filter(c => c.box === b).length);
     const nextDue = cards.filter(c => c.dueAt > now).sort((a, b) => a.dueAt - b.dueAt)[0];
     const start = K.block * 200 + 1;
     const blocks = Math.ceil(Heisig.TOTAL / 200);
@@ -58,12 +59,14 @@ const KanjiView = (() => {
         <div class="kanji-progress-row"><b>Rahmen ${Heisig.unlocked} von ${Heisig.TOTAL}</b><span class="hint">${Math.round((Heisig.unlocked / Heisig.TOTAL) * 100)} %</span></div>
         <div class="progress"><div class="progress-bar" style="width:${(Heisig.unlocked / Heisig.TOTAL) * 100}%"></div></div>
         <div class="row center">
-          ${due ? `<button class="primary big" data-k="review">Wiederholen · ${due}</button>` : ""}
-          ${next && allowance ? `<button class="${due ? "secondary" : "primary big"}" data-k="learn">Neue Rahmen lernen · ab ${next} (heute noch ${allowance})</button>` : ""}
+          ${due ? `<button class="primary big" data-k="review">Tagesabfrage · ${due}</button>` : ""}
+          ${next && allowance ? `<button class="primary big" data-k="learn">Neue Rahmen lernen · ab ${next} (heute noch ${allowance})</button>` : ""}
+          ${practice ? `<button class="secondary" data-k="practice">Fach 1 üben · ${practice} (zählt nicht)</button>` : ""}
         </div>
-        ${!due ? `<p class="hint center">${nextDue ? `Keine Kanji fällig – nächste Wiederholung ${fmtNext(nextDue.dueAt)}.` : "Noch keine Kanji in der Kartei."}${next && !allowance ? " Für heute sind genug neue Rahmen dazugekommen." : ""}</p>` : ""}
+        ${due ? `<p class="hint center">Erst die fälligen Kanji – danach kannst du neue Rahmen lernen. Nicht gewusst → zurück in Fach 1.</p>`
+          : `<p class="hint center">${cards.length ? "✓ Tagesabfrage erledigt." : "Noch keine Kanji in der Kartei."}${nextDue && !Heisig.dueTotal(now) ? ` Nächste Abfrage ${fmtNext(nextDue.dueAt)}.` : ""}${Heisig.dueTotal(now) ? ` Für heute genug abgefragt – der Rest kommt morgen.` : ""}${next && !allowance && cards.length ? " Für heute sind genug neue Rahmen dazugekommen." : ""}</p>`}
       </div>
-      <div class="boxes4 compact">${boxes.map((n, i) => `
+      <div class="boxes4 boxes5 compact">${boxes.map((n, i) => `
         <div class="box4 box4-${i + 1}"><div class="box4-head"><b>Fach ${i + 1}</b><span>${Scheduler.BOX_NAMES[i + 1]}</span></div><div class="box4-count">${n}</div></div>`).join("")}
       </div>
       <div class="panel">
@@ -75,7 +78,7 @@ const KanjiView = (() => {
           const kw = Heisig.keyword(k.n);
           return `<button class="kcell st-${st}" data-frame="${k.n}" title="Rahmen ${k.n}${kw ? ` · ${escapeHtml(kw)}` : ""}"><span class="jp">${k.kanji}</span><small>${k.n}</small></button>`;
         }).join("")}</div>
-        <p class="hint legend-row"><span class="kdot st-locked"></span>noch nicht gelernt <span class="kdot st-box1"></span>Fach 1 <span class="kdot st-box2"></span>Fach 2 <span class="kdot st-box3"></span>Fach 3 <span class="kdot st-box4"></span>Fach 4</p>
+        <p class="hint legend-row"><span class="kdot st-locked"></span>noch nicht gelernt <span class="kdot st-box1"></span>Fach 1 <span class="kdot st-box2"></span>Fach 2 <span class="kdot st-box3"></span>Fach 3 <span class="kdot st-box4"></span>Fach 4 <span class="kdot st-box5"></span>Fach 5</p>
       </div>
       <div class="panel">
         <h3>Einstellungen</h3>
@@ -96,13 +99,15 @@ const KanjiView = (() => {
     const n = Heisig.nextFrame();
     const allowance = Heisig.newAllowance();
     if (!n || !allowance) {
-      const due = Heisig.dueCards().length;
+      const practice = Heisig.practiceCards().length;
+      const due = Heisig.dueQueue().length;
       root.innerHTML = `
         <div class="panel center">
-          <h2>${n ? "Für heute genug neue Rahmen" : "Alle 2200 Rahmen gelernt! 🎉"}</h2>
-          <p>${K.learnedNow ? `Heute neu: <b>${K.learnedNow}</b> Rahmen.` : ""} Jetzt am besten gleich abfragen – vom Schlüsselwort zum Kanji.</p>
+          <h2>${due ? "Erst die Tagesabfrage" : n ? "Für heute genug neue Rahmen" : "Alle 2200 Rahmen gelernt! 🎉"}</h2>
+          <p>${K.learnedNow ? `Heute neu: <b>${K.learnedNow}</b> Rahmen. ` : ""}${practice ? "Die neuen Rahmen liegen in Fach 1 – üb sie heute, so oft du willst. Abgefragt werden sie ab morgen." : ""}</p>
           <div class="row center">
-            ${due ? `<button class="primary big" data-k="review">Abfragen · ${due}</button>` : ""}
+            ${due ? `<button class="primary big" data-k="review">Tagesabfrage · ${due}</button>` : ""}
+            ${practice ? `<button class="${due ? "secondary" : "primary big"}" data-k="practice">Fach 1 üben · ${practice}</button>` : ""}
             <button class="secondary" data-k="overview">Zur Übersicht</button>
           </div>
         </div>`;
@@ -128,19 +133,27 @@ const KanjiView = (() => {
   }
 
   // ---------- Wiederholen (Schlüsselwort → Kanji) ----------
-  function startReview() {
-    const queue = Heisig.dueCards().map(c => c.id);
-    if (!queue.length) { toast("Gerade ist kein Kanji fällig."); return; }
-    show("review", { queue, revealed: false, storyOpen: false, done: 0, good: 0, again: 0 });
+  // reviewMode "due": Tagesabfrage · "practice": Fach 1 frei üben (ohne Wirkung)
+  function startReview(reviewMode = "due") {
+    const cards = reviewMode === "practice" ? shuffle(Heisig.practiceCards()) : Heisig.dueQueue();
+    if (!cards.length) { toast(reviewMode === "practice" ? "In Fach 1 ist heute nichts zu üben." : "Gerade ist kein Kanji fällig."); return; }
+    show("review", { reviewMode, queue: cards.map(c => c.id), revealed: false, storyOpen: false, done: 0, good: 0, again: 0 });
   }
 
   function renderReview() {
     if (!K.queue.length) {
+      const due = K.reviewMode === "due";
+      const practice = Heisig.practiceCards().length;
       root.innerHTML = `
         <div class="panel center">
-          <h2>お疲れさま！ <small>Gut gemacht</small></h2>
-          <p><b>${K.done}</b> Wiederholungen · ${K.good}× gewusst · ${K.again}× noch nicht</p>
-          <div class="row center"><button class="primary" data-k="overview">Fertig</button></div>
+          <h2>お疲れさま！ <small>${due ? "Tagesabfrage erledigt" : "Fach 1 geübt"}</small></h2>
+          <p>${due ? `<b>${K.done}</b> Kanji abgefragt · ${K.good}× gewusst · ${K.again}× zurück in Fach 1`
+            : `${K.done} Durchgänge geübt. Ob die Rahmen in Fach 2 kommen, entscheidet die Abfrage morgen.`}</p>
+          <div class="row center">
+            ${due && Heisig.nextFrame() && Heisig.newAllowance() ? `<button class="secondary" data-k="learn">Neue Rahmen lernen</button>` : ""}
+            ${due && practice ? `<button class="secondary" data-k="practice">Fach 1 üben · ${practice}</button>` : ""}
+            <button class="primary" data-k="overview">Fertig</button>
+          </div>
         </div>`;
       return;
     }
@@ -148,7 +161,7 @@ const KanjiView = (() => {
     const n = card.frame, k = Heisig.frame(n), e = Heisig.entry(n);
     const box = Scheduler.boxOf(card);
     root.innerHTML = `
-      <div class="session-top"><span class="hint on-page">${K.done} erledigt · ${K.queue.length} übrig</span><button class="link on-page" data-k="overview">Einheit beenden</button></div>
+      <div class="session-top"><span class="hint on-page"><b>${K.reviewMode === "due" ? "Tagesabfrage" : "Fach 1 üben – zählt nicht"}</b> · ${K.done} erledigt · ${K.queue.length} übrig</span><button class="link on-page" data-k="overview">${K.reviewMode === "due" ? "Unterbrechen" : "Beenden"}</button></div>
       <div class="panel flash kanji-flash">
         <span class="tag box-tag box4-${box}">${BOX_LABEL(box)}</span>
         <div class="frame-no">Rahmen ${n}</div>
@@ -170,10 +183,13 @@ const KanjiView = (() => {
 
   function rate(rating) {
     const id = K.queue.shift();
-    const card = Heisig.review(id, rating);
     K.done++;
     rating === "good" ? K.good++ : K.again++;
-    if (Scheduler.comesBackInSession(card, Date.now())) K.queue.splice(Math.min(3, K.queue.length), 0, id);
+    if (K.reviewMode === "due") Heisig.review(id, rating);
+    else {
+      Heisig.practice(id, rating);
+      if (rating === "again") K.queue.splice(Math.min(3, K.queue.length), 0, id);
+    }
     K.revealed = false;
     K.storyOpen = false;
     renderReview();
@@ -212,7 +228,8 @@ const KanjiView = (() => {
     switch (act.dataset.k) {
       case "overview": show("overview"); break;
       case "learn": show("learn", { learnedNow: 0 }); break;
-      case "review": startReview(); break;
+      case "review": startReview("due"); break;
+      case "practice": startReview("practice"); break;
       case "replay": { const st = $("#k-stage", root); const n = K.mode === "review" ? Store.db.heisig.cards.find(c => c.id === K.queue[0]).frame : K.mode === "detail" ? K.frame : Heisig.nextFrame(); drawKanji(st, n); break; }
       case "learned": {
         const kw = $("#k-keyword", root).value;

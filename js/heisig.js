@@ -23,10 +23,16 @@ const Heisig = (() => {
     return `box${Scheduler.boxOf(c)}`;
   }
 
-  const activatedToday = (now = Date.now()) => h().activations[todayStr(now)] || 0;
-  const newAllowance = (now = Date.now()) => Math.max(0, h().newPerDay - activatedToday(now));
+  // Gleiche Lernkartei-Regeln wie bei den Wörtern: erst die fälligen Kanji, Rückfälle belegen Plätze
+  const deck = () => ({ cards: h().cards, reviews: h().reviews, activations: h().activations });
+  const activatedToday = (now = Date.now()) => Scheduler.activatedToday(deck(), now);
+  const lapsesToday = (now = Date.now()) => Scheduler.lapsesToday(deck(), now);
+  const dueQueue = (now = Date.now()) => Scheduler.dueQueue(deck(), now);
+  const dueTotal = (now = Date.now()) => Scheduler.dueTotal(deck(), now);
+  const gateOpen = (now = Date.now()) => Scheduler.gateOpen(deck(), now);
+  const practiceCards = (now = Date.now()) => Scheduler.practiceCards(deck(), now);
+  const newAllowance = (now = Date.now()) => (gateOpen(now) ? Scheduler.allowance(deck(), now, h().newPerDay) : 0);
   const nextFrame = () => (h().unlocked < TOTAL ? h().unlocked + 1 : null);
-  const dueCards = (now = Date.now()) => h().cards.filter(c => Scheduler.isDue(c, now)).sort((a, b) => a.dueAt - b.dueAt || a.frame - b.frame);
 
   function makeCard(n, now) {
     return { ...Scheduler.newCard(String(n), null, now), id: `k-${n}`, frame: n };
@@ -35,10 +41,11 @@ const Heisig = (() => {
   // Nächsten Rahmen als gelernt eintragen (nur in Reihenfolge möglich)
   function learn(n, keywordText, story, now = Date.now()) {
     if (n !== nextFrame()) throw new Error(`Rahmen ${n} ist nicht der nächste (${nextFrame()})`);
+    if (!gateOpen(now)) throw new Error("Erst die fälligen Kanji abfragen");
     h().frames[n] = { keyword: keywordText.trim(), story: story.trim() };
     if (!cardOf(n)) h().cards.push(makeCard(n, now));
     h().unlocked = n;
-    h().activations[todayStr(now)] = activatedToday(now) + 1;
+    h().activations[Scheduler.dayKey(now)] = activatedToday(now) + 1;
     Store.touchDay(now);
     Store.persist();
   }
@@ -48,7 +55,7 @@ const Heisig = (() => {
     Store.persist();
   }
 
-  // Alle Rahmen bis n als schon gelernt übernehmen: Karten in der Wiederholung,
+  // Alle Rahmen bis n als schon gelernt übernehmen: Karten in Fach 3,
   // gestaffelt über zwei Wochen fällig, damit keine Lawine entsteht
   function markLearnedUntil(n, now = Date.now()) {
     n = Math.max(0, Math.min(TOTAL, n));
@@ -56,8 +63,7 @@ const Heisig = (() => {
     for (let i = h().unlocked + 1; i <= n; i++) {
       if (cardOf(i)) continue;
       const c = makeCard(i, now);
-      c.state = "review";
-      c.intervalDays = 3;
+      c.box = 3;
       c.dueAt = Scheduler.inDays(now, 1 + (added % 14));
       h().cards.push(c);
       added++;
@@ -77,11 +83,20 @@ const Heisig = (() => {
     return card;
   }
 
+  // Freies Üben in Fach 1 (ändert nichts an Fach oder Fälligkeit)
+  function practice(cardId, rating, now = Date.now()) {
+    const c = h().cards.find(x => x.id === cardId);
+    h().reviews.push({ id: `kr-${h().reviews.length + 1}`, cardId, reviewedAt: now, rating, boxBefore: c.box, boxAfter: c.box, nextDueAt: c.dueAt, practice: true });
+    Store.touchDay(now);
+    Store.persist();
+  }
+
   function setNewPerDay(n) { h().newPerDay = n; Store.persist(); }
 
   return {
     KANJI, TOTAL, frame, byKanji: k => byKanji[k] || null, cardOf, entry, keyword, promptText, status,
-    activatedToday, newAllowance, nextFrame, dueCards, learn, saveEntry, markLearnedUntil, review, setNewPerDay,
+    activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, nextFrame,
+    learn, saveEntry, markLearnedUntil, review, practice, setNewPerDay,
     get unlocked() { return h().unlocked; }, get newPerDay() { return h().newPerDay; },
   };
 })();

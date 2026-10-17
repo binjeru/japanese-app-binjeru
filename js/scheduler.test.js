@@ -13,54 +13,45 @@ function eq(actual, expected, label = "") {
 const S = Scheduler;
 const T0 = new Date(2026, 9, 17, 10, 0).getTime(); // 17.10.2026, 10:00
 const at = (d, h, m = 0) => new Date(2026, 9, d, h, m).getTime();
+const card = (box, dueAt = T0) => ({ ...S.newCard(`x${box}-${dueAt}`, null, T0), box, dueAt });
 
-test("Neue Karte ist sofort fällig und in Fach 1", () => {
+// ---------- Lernkartei (5 Fächer) ----------
+test("Neue Karte: Fach 1, heute frei übbar, Abfrage erst morgen um 4 Uhr", () => {
   const c = S.newCard("約束", "himitsu/1/5", T0);
-  eq(c.state, "new"); eq(c.dueAt, T0); eq(S.boxOf(c), 1); eq(S.isDue(c, T0), true);
+  eq(c.box, 1); eq(c.dueAt, at(18, 4));
+  eq(S.isDue(c, T0), false, "heute nicht fällig"); eq(S.isPracticable(c, T0), true, "heute übbar");
+  eq(S.isDue(c, at(18, 9)), true, "morgen fällig"); eq(S.isPracticable(c, at(18, 9)), false);
 });
 
-test("Gewusst beim Kennenlernen → nach 3 Minuten in derselben Einheit", () => {
-  const { card, log } = S.review(S.newCard("約束", null, T0), "good", T0);
-  eq(card.state, "learning"); eq(card.dueAt, T0 + 3 * S.MIN); eq(S.boxOf(card), 1);
-  eq(S.comesBackInSession(card, T0), true); eq(log.boxBefore, 1); eq(log.boxAfter, 1);
-});
-
-test("Noch nicht beim Kennenlernen → nach 1 Minute erneut", () => {
-  const { card } = S.review(S.newCard("約束", null, T0), "again", T0);
-  eq(card.state, "learning"); eq(card.step, 0); eq(card.dueAt, T0 + S.MIN);
-});
-
-test("Zweites Gewusst → am nächsten Tag (4 Uhr), Fach 2", () => {
-  let c = S.newCard("約束", null, T0);
-  c = S.review(c, "good", T0).card;
-  c = S.review(c, "good", T0 + 3 * S.MIN).card;
-  eq(c.state, "review"); eq(c.intervalDays, 1); eq(c.dueAt, at(18, 4)); eq(S.boxOf(c), 2);
-  eq(S.comesBackInSession(c, T0 + 3 * S.MIN), false);
-});
-
-test("Intervalle wachsen: 1 → 3 → 8 → 20 → 50 Tage, Fächer 2 → 2 → 3 → 3 → 4", () => {
-  let c = { ...S.newCard("x", null, T0), state: "review", intervalDays: 1 };
-  const expected = [[3, 2], [8, 3], [20, 3], [50, 4]];
-  for (const [days, box] of expected) {
-    c = S.review(c, "good", T0).card;
-    eq(c.intervalDays, days, "Intervall"); eq(S.boxOf(c), box, "Fach");
+test("Gewusst: ein Fach weiter mit 2 · 5 · 14 · 35 Tagen, in Fach 5 dann alle 90 Tage", () => {
+  let c = card(1);
+  let now = T0;
+  for (const [box, days] of [[2, 2], [3, 5], [4, 14], [5, 35], [5, 90], [5, 90]]) {
+    const r = S.review(c, "good", now);
+    eq(r.card.box, box, "Fach"); eq(r.card.dueAt, S.inDays(now, days), `Abstand in Fach ${box}`);
+    c = r.card; now = c.dueAt + 5 * 3600e3;
   }
 });
 
-test("Noch nicht in der Wiederholung → relearning, Fach 1, halbes Intervall, Lapse gezählt", () => {
-  const c0 = { ...S.newCard("x", null, T0), state: "review", intervalDays: 20 };
-  const { card, log } = S.review(c0, "again", T0);
-  eq(card.state, "relearning"); eq(card.intervalDays, 10); eq(card.lapseCount, 1);
-  eq(card.dueAt, T0 + S.MIN); eq(log.boxBefore, 3); eq(log.boxAfter, 1);
-  const back = S.review(card, "good", T0 + S.MIN).card;
-  eq(back.state, "review"); eq(back.dueAt, at(27, 4)); eq(S.boxOf(back), 3);
+test("Nicht gewusst in Fach 2–5: zurück in Fach 1 (do or die), morgen wieder fällig, zählt als Rückfall", () => {
+  for (const box of [2, 3, 4, 5]) {
+    const { card: c, log } = S.review(card(box), "again", T0);
+    eq(c.box, 1); eq(c.dueAt, at(18, 4)); eq(c.lapseCount, 1);
+    eq(log.boxBefore, box); eq(log.boxAfter, 1); eq(S.isLapse(log), true);
+    eq(S.isPracticable(c, T0), true, "heute in Fach 1 übbar");
+  }
 });
 
-test("Zähler für Wiederholungen und richtige Antworten", () => {
-  let c = S.newCard("x", null, T0);
-  c = S.review(c, "again", T0).card;
-  c = S.review(c, "good", T0).card;
-  eq(c.reviewCount, 2); eq(c.correctCount, 1); eq(c.lastReviewedAt, T0);
+test("Nicht gewusst in Fach 1: bleibt in Fach 1, kein Rückfall", () => {
+  const { card: c, log } = S.review(card(1), "again", T0);
+  eq(c.box, 1); eq(c.lapseCount, 0); eq(S.isLapse(log), false); eq(c.dueAt, at(18, 4));
+});
+
+test("Zähler und unveränderte Eingabekarte", () => {
+  const c0 = card(2);
+  let c = S.review(c0, "again", T0).card;
+  c = S.review(c, "good", at(18, 9)).card;
+  eq(c.reviewCount, 2); eq(c.correctCount, 1); eq(c0.reviewCount, 0); eq(c0.box, 2);
 });
 
 test("Lerntag beginnt um 4 Uhr", () => {
@@ -69,17 +60,42 @@ test("Lerntag beginnt um 4 Uhr", () => {
   eq(S.inDays(at(18, 2), 1), at(18, 4)); // 2 Uhr nachts zählt noch zum Vortag
 });
 
-test("Weniger neue Karten bei vielen fälligen Wiederholungen", () => {
-  eq(S.suggestedNewCount(0), 12); eq(S.suggestedNewCount(11), 12); eq(S.suggestedNewCount(12), 6);
-  eq(S.suggestedNewCount(25), 3); eq(S.suggestedNewCount(40), 0);
+test("Tagesabfrage: Fach 1 zuerst, höchstens 50 pro Tag, danach freigegeben", () => {
+  const cards = [card(3, at(16, 4)), card(1, at(17, 4)), card(2, at(15, 4))];
+  for (let i = 0; i < 60; i++) cards.push(card(4, at(10, 4)));
+  const deck = { cards, reviews: [], activations: {} };
+  const q = S.dueQueue(deck, T0);
+  eq(q.length, 50); eq(q[0].box, 1); eq(q[1].box, 2); eq(q[2].box, 3);
+  eq(S.gateOpen(deck, T0), false);
+  for (let i = 0; i < 50; i++) deck.reviews.push({ reviewedAt: T0, rating: "good", boxBefore: 4, boxAfter: 5 });
+  eq(S.dueQueue(deck, T0).length, 0, "Tagesgrenze erreicht"); eq(S.gateOpen(deck, T0), true);
+  eq(S.dueTotal(deck, T0), 63, "Rest bleibt fällig für morgen");
 });
 
-test("Review-Funktion verändert die Eingabekarte nicht", () => {
-  const c = S.newCard("x", null, T0);
-  S.review(c, "good", T0);
-  eq(c.state, "new"); eq(c.reviewCount, 0);
+test("Üben zählt nicht für die Tagesgrenze", () => {
+  const deck = { cards: [card(2, at(16, 4))], reviews: [{ reviewedAt: T0, rating: "good", boxBefore: 1, boxAfter: 1, practice: true }], activations: {} };
+  eq(S.reviewsToday(deck, T0).length, 0); eq(S.gateOpen(deck, T0), false);
 });
 
+test("Neue Karten: 12 pro Tag minus heute aktivierte minus Rückfälle", () => {
+  const deck = { cards: [], reviews: [], activations: { [S.dayKey(T0)]: 4 } };
+  eq(S.allowance(deck, T0, 12), 8);
+  deck.reviews.push({ reviewedAt: T0, rating: "again", boxBefore: 3, boxAfter: 1 });
+  deck.reviews.push({ reviewedAt: T0, rating: "again", boxBefore: 1, boxAfter: 1 }); // kein Rückfall
+  deck.reviews.push({ reviewedAt: at(16, 9), rating: "again", boxBefore: 2, boxAfter: 1 }); // gestern
+  eq(S.allowance(deck, T0, 12), 7);
+  eq(S.newAllowance(12, 10, 5), 0, "nie negativ");
+});
+
+test("Alte Karten werden auf Fächer abgebildet", () => {
+  eq(S.migrate({ id: "a", state: "learning", intervalDays: 0 }).box, 1);
+  eq(S.migrate({ id: "b", state: "review", intervalDays: 3 }).box, 2);
+  eq(S.migrate({ id: "c", state: "review", intervalDays: 10 }).box, 3);
+  eq(S.migrate({ id: "d", state: "review", intervalDays: 50 }).box, 4);
+  eq(S.migrate({ id: "e", state: "review", intervalDays: 50 }).state, undefined);
+});
+
+// ---------- Inhalte ----------
 test("Furigana lässt Okurigana weg", () => {
   eq(furiganaHtml("忘れました", "わすれました"), "<ruby>忘<rt>わす</rt></ruby>れました");
   eq(furiganaHtml("お誕生日", "おたんじょうび"), "お<ruby>誕生日<rt>たんじょうび</rt></ruby>");
@@ -117,6 +133,7 @@ test("Häufigkeitsrang: häufige Wörter vor seltenen, Wörter ohne Rang zuletzt
   eq(sorted[0], "人"); eq(sorted[sorted.length - 1], "ドイツ人");
 });
 
+// ---------- Kanji (Heisig) ----------
 test("Heisig-Reihenfolge stimmt mit der deutschen Ausgabe überein", () => {
   eq(Heisig.TOTAL, 2200);
   const expected = { 137: "水", 402: "歴", 540: "曽", 1934: "共", 2173: "関" }; // Wasser, Zeitablauf, zuvor, zusammen, Zusammenhang
@@ -124,7 +141,7 @@ test("Heisig-Reihenfolge stimmt mit der deutschen Ausgabe überein", () => {
   for (let n = 1; n <= 2200; n++) if (Heisig.frame(n).n !== n) throw new Error(`Lücke bei Rahmen ${n}`);
 });
 
-test("Heisig: Rahmen nur in Reihenfolge, Tageslimit, keine doppelten Karten", () => {
+test("Heisig: Rahmen nur in Reihenfolge, Tageslimit, Fach 1 erst morgen abgefragt", () => {
   const T = at(17, 10);
   Heisig.learn(1, "eins", "", T);
   eq(Heisig.unlocked, 1); eq(Heisig.nextFrame(), 2); eq(Heisig.status(1), "box1");
@@ -134,16 +151,25 @@ test("Heisig: Rahmen nur in Reihenfolge, Tageslimit, keine doppelten Karten", ()
   for (let n = 2; n <= 10; n++) Heisig.learn(n, "", "", T);
   eq(Heisig.newAllowance(T), 0, "Tageslimit 10");
   eq(Store.db.heisig.cards.length, 10);
+  eq(Heisig.dueQueue(T).length, 0, "heute nichts fällig"); eq(Heisig.practiceCards(T).length, 10, "heute übbar");
   eq(Heisig.promptText(2), `(engl.) ${Heisig.frame(2).en.split(", ")[0]}`, "Ersatz ohne Schlüsselwort");
 });
 
-test("Heisig: „bis Rahmen X gelernt“ verteilt die Wiederholungen über zwei Wochen", () => {
+test("Heisig: „bis Rahmen X gelernt“ legt Karten in Fach 3, verteilt über zwei Wochen", () => {
   const T = at(17, 10);
   const added = Heisig.markLearnedUntil(40, T);
   eq(added, 30); eq(Heisig.unlocked, 40);
-  const due = new Set(Store.db.heisig.cards.filter(c => c.frame > 10).map(c => c.dueAt));
-  eq(due.size, 14, "verschiedene Fälligkeitstage");
-  eq(Heisig.dueCards(T).length, 10, "heute nur die neu gelernten fällig");
+  const imported = Store.db.heisig.cards.filter(c => c.frame > 10);
+  eq(new Set(imported.map(c => c.dueAt)).size, 14, "verschiedene Fälligkeitstage");
+  eq(imported.every(c => c.box === 3), true, "Fach 3");
+});
+
+test("Heisig: offene Tagesabfrage sperrt neue Rahmen", () => {
+  const T = at(19, 10); // zwei Tage später: Fach-1-Karten von gestern sind fällig
+  eq(Heisig.gateOpen(T), false); eq(Heisig.newAllowance(T), 0);
+  let threw = false;
+  try { Heisig.learn(41, "", "", T); } catch { threw = true; }
+  eq(threw, true);
 });
 
 test("Strichfolgen-Datei pro 200 Rahmen", () => {
