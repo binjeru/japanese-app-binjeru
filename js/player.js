@@ -312,7 +312,7 @@ const WordSheet = (() => {
       <div class="ws-tags">${v.pos ? `<span class="tag">${escapeHtml(v.pos)}</span>` : ""}${status === "known" ? `<span class="tag good">bekannt</span>` : ""}</div>
       <div class="ws-word jp">${furiganaHtml(key, w.r)}</div>
       <div class="ws-reading"><span class="jp">${w.r}</span> · ${escapeHtml(w.ro || kanaToRomaji(w.r))}</div>
-      <div class="ws-meaning">${escapeHtml(w.de)}</div>
+      <div class="ws-meaning">${escapeHtml(w.de)}${learnable && Content.rank(vid) ? ` <span class="rank" title="Häufigkeitsrang im Japanischen (Leeds-Korpus)">#${Content.rank(vid).toLocaleString("de-DE")}</span>` : ""}</div>
       ${formInfo ? `<div class="ws-info">${formInfo}</div>` : ""}
       ${w.note || (vid !== key && v.note) ? `<div class="ws-info">💡 ${escapeHtml(w.note || v.note)}</div>` : ""}
       ${s ? `<div class="ws-example">

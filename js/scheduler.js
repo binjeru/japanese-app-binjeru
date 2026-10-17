@@ -17,7 +17,7 @@ const Scheduler = (() => {
   const AGAIN_DELAY = 1 * MIN;           // „Noch nicht“ → in derselben Einheit nochmal
   const LEARN_DELAY = 3 * MIN;           // erster erfolgreicher Lernschritt
   const SESSION_WINDOW = 20 * MIN;       // so bald fällige Karten kommen in derselben Einheit wieder
-  const MAX_NEW_PER_DAY = 8;
+  const MAX_NEW_PER_DAY = 12;
   const BOX_NAMES = ["", "Kennenlernen", "Aufbau", "Festigen", "Langzeit"];
 
   // Beginn des Lerntags, zu dem der Zeitpunkt t gehört
@@ -84,8 +84,8 @@ const Scheduler = (() => {
   // Weniger neue Karten, wenn schon viele Wiederholungen anstehen
   function suggestedNewCount(dueReviews) {
     if (dueReviews >= 40) return 0;
-    if (dueReviews >= 25) return 2;
-    if (dueReviews >= 12) return 4;
+    if (dueReviews >= 25) return 3;
+    if (dueReviews >= 12) return 6;
     return MAX_NEW_PER_DAY;
   }
 

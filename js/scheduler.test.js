@@ -70,8 +70,8 @@ test("Lerntag beginnt um 4 Uhr", () => {
 });
 
 test("Weniger neue Karten bei vielen fälligen Wiederholungen", () => {
-  eq(S.suggestedNewCount(0), 8); eq(S.suggestedNewCount(11), 8); eq(S.suggestedNewCount(12), 4);
-  eq(S.suggestedNewCount(25), 2); eq(S.suggestedNewCount(40), 0);
+  eq(S.suggestedNewCount(0), 12); eq(S.suggestedNewCount(11), 12); eq(S.suggestedNewCount(12), 6);
+  eq(S.suggestedNewCount(25), 3); eq(S.suggestedNewCount(40), 0);
 });
 
 test("Review-Funktion verändert die Eingabekarte nicht", () => {
@@ -109,6 +109,12 @@ test("約束 und 秘密 kommen mehrfach in der Testgeschichte vor", () => {
   if (story.freq["約束"] < 3) throw new Error(`約束: ${story.freq["約束"]}`);
   if (story.freq["秘密"] < 3) throw new Error(`秘密: ${story.freq["秘密"]}`);
   eq(Content.storyVocab("himitsu").slice(0, 3).includes("約束"), true, "約束 unter den 3 häufigsten Wörtern");
+});
+
+test("Häufigkeitsrang: häufige Wörter vor seltenen, Wörter ohne Rang zuletzt", () => {
+  eq(Content.rank("約束"), FREQ_RANK["約束"]);
+  const sorted = ["秘密", "ドイツ人", "人", "約束"].sort(Content.byRank);
+  eq(sorted[0], "人"); eq(sorted[sorted.length - 1], "ドイツ人");
 });
 
 const failed = results.filter(r => !r.ok).length;

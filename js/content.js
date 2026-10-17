@@ -12,6 +12,9 @@ const Content = (() => {
   const reading = id => DICT[id].r;
   const isLearnable = id => !NOT_LEARNABLE.has(DICT[id].pos);
   const sayText = key => DICT[key].say || DICT[key].r;
+  // Häufigkeitsrang im Japanischen (null = nicht in der Liste)
+  const rank = id => (typeof FREQ_RANK !== "undefined" && FREQ_RANK[id]) || null;
+  const byRank = (a, b) => (rank(a) || Infinity) - (rank(b) || Infinity);
 
   const sentences = {};       // id → Sentence
   const storiesById = {};
@@ -87,7 +90,7 @@ const Content = (() => {
 
   return {
     stories: STORIES, story: id => storiesById[id], sentence: id => sentences[id],
-    vocab, vocabIdOf, display, reading, isLearnable, sayText, globalFreq,
+    vocab, vocabIdOf, display, reading, isLearnable, sayText, globalFreq, rank, byRank,
     romajiLine, sentenceHtml, storyVocab, firstSentenceAny,
   };
 })();

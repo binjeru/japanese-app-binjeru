@@ -29,6 +29,10 @@ document.addEventListener("click", e => {
 });
 
 const wordHtml = (vid, furigana = true) => furiganaHtml(Content.display(vid), Content.reading(vid));
+const rankBadge = vid => {
+  const r = Content.rank(vid);
+  return r ? `<span class="rank" title="Häufigkeitsrang im Japanischen (Leeds-Korpus)">#${r.toLocaleString("de-DE")}</span>` : "";
+};
 const storyTitle = id => { const s = Content.story(id); return s ? s.titleJp : ""; };
 function fmtDue(t) {
   const now = Date.now();
@@ -110,7 +114,8 @@ RENDER.saved = () => {
   const allowance = Store.newAllowance();
   const dueReviews = Store.dueReviewCount();
   for (const vid of [...selected]) if (!Store.savedOf(vid)) selected.delete(vid);
-  const list = [...Store.db.saved].sort((a, b) => b.savedAt - a.savedAt);
+  // Häufigste Wörter des Japanischen zuerst
+  const list = [...Store.db.saved].sort((a, b) => Content.byRank(a.vocabId, b.vocabId) || b.savedAt - a.savedAt);
   let limitText = `Heute kannst du noch <b>${allowance}</b> ${allowance === 1 ? "neue Karte" : "neue Karten"} aktivieren.`;
   if (allowance < Scheduler.MAX_NEW_PER_DAY - Store.activatedToday() && dueReviews >= 12) limitText += ` Weniger als sonst, weil ${dueReviews} Wiederholungen anstehen.`;
   if (allowance === 0 && Store.activatedToday() > 0) limitText = "Für heute sind genug neue Karten aktiviert. Morgen geht es weiter.";
@@ -130,7 +135,7 @@ RENDER.saved = () => {
         <li class="saved-item ${selected.has(vid) ? "selected" : ""}">
           <label class="saved-check"><input type="checkbox" data-vid="${escapeHtml(vid)}" ${selected.has(vid) ? "checked" : ""}></label>
           <div class="saved-body">
-            <div><span class="saved-word jp">${wordHtml(vid)}</span> <span class="saved-de">${escapeHtml(DICT[vid].de)}</span></div>
+            <div><span class="saved-word jp">${wordHtml(vid)}</span> <span class="saved-de">${escapeHtml(DICT[vid].de)}</span>${rankBadge(vid)}</div>
             ${s ? `<div class="saved-ex jp">${Content.sentenceHtml(s, { highlight: vid })}</div><div class="saved-ex-de">${escapeHtml(s.de)}</div>` : ""}
             <div class="meta">${s ? `<a href="#" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">${storyTitle(s.storyId)} · Szene ${s.sceneIndex + 1}</a> · ` : ""}${item.source === "check" ? "Wortschatz-Check" : "markiert"}</div>
           </div>
@@ -167,11 +172,9 @@ $("#saved").addEventListener("click", e => {
   const act = e.target.closest("[data-act]");
   if (!act) return;
   if (act.dataset.act === "suggest") {
-    // Häufige Wörter aus der aktuellen Geschichte zuerst, dann allgemein häufige
-    const cur = Content.story(Store.db.currentStoryId);
-    const score = vid => (cur && cur.freq[vid] ? 100 + cur.freq[vid] : 0) + (Content.globalFreq[vid] || 0);
+    // Die im Japanischen häufigsten Wörter zuerst
     selected.clear();
-    Store.db.saved.map(s => s.vocabId).sort((a, b) => score(b) - score(a)).slice(0, Store.newAllowance()).forEach(v => selected.add(v));
+    Store.db.saved.map(s => s.vocabId).sort(Content.byRank).slice(0, Store.newAllowance()).forEach(v => selected.add(v));
     RENDER.saved();
   } else if (act.dataset.act === "activate") {
     const n = Store.activate([...selected]);
@@ -443,7 +446,9 @@ RENDER.profile = () => {
         <button class="secondary danger" data-act="reset">Alles zurücksetzen</button>
         <a class="secondary" href="tests.html" target="_blank" rel="noopener">Tests ausführen</a>
       </div>
-    </div>`;
+    </div>
+    <p class="hint on-page">Quellen: Häufigkeitsränge aus dem Leeds Internet Corpus (CC BY 2.5) ·
+      Kanji-Daten aus KANJIDIC2, EDRDG (CC BY-SA 4.0) · Strichfolgen aus KanjiVG, Ulrich Apel (CC BY-SA 3.0)</p>`;
 };
 $("#profile").addEventListener("click", e => {
   const t = e.target.closest("[data-topic]");
@@ -463,7 +468,7 @@ $("#profile").addEventListener("click", e => {
     const blob = new Blob([Store.exportJson()], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `monogatari-sicherung-${todayStr()}.json`;
+    a.download = `binjeru-sicherung-${todayStr()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   } else if (act.dataset.act === "reset") {
