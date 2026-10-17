@@ -287,6 +287,17 @@ const WordSheet = (() => {
     cur = null;
   }
 
+  // Heisig-Rahmen der Kanji im Wort (nur Anzeige; die Geschichten bleiben unverändert)
+  function kanjiInfo(vid) {
+    const ks = [...new Set([...Content.display(vid)].filter(isKanji))].map(Heisig.byKanji).filter(Boolean);
+    if (!ks.length) return "";
+    return `<div class="ws-kanji">${ks.map(k => {
+      const learned = k.n <= Heisig.unlocked;
+      const kw = Heisig.keyword(k.n);
+      return `<span class="${learned ? "learned" : ""}"><b class="jp">${k.kanji}</b> Rahmen ${k.n}${learned ? ` ✓${kw ? ` · ${escapeHtml(kw)}` : ""}` : ""}</span>`;
+    }).join("")}</div>`;
+  }
+
   function render() {
     const { key, vid, sentenceId } = cur;
     const w = DICT[key], v = DICT[vid];
@@ -315,6 +326,7 @@ const WordSheet = (() => {
       <div class="ws-meaning">${escapeHtml(w.de)}${learnable && Content.rank(vid) ? ` <span class="rank" title="Häufigkeitsrang im Japanischen (Leeds-Korpus)">#${Content.rank(vid).toLocaleString("de-DE")}</span>` : ""}</div>
       ${formInfo ? `<div class="ws-info">${formInfo}</div>` : ""}
       ${w.note || (vid !== key && v.note) ? `<div class="ws-info">💡 ${escapeHtml(w.note || v.note)}</div>` : ""}
+      ${kanjiInfo(vid)}
       ${s ? `<div class="ws-example">
         <p class="jp">${Content.sentenceHtml(s, { highlight: vid })}</p>
         <p class="de">${escapeHtml(s.de)}</p>

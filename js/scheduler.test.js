@@ -117,6 +117,42 @@ test("Häufigkeitsrang: häufige Wörter vor seltenen, Wörter ohne Rang zuletzt
   eq(sorted[0], "人"); eq(sorted[sorted.length - 1], "ドイツ人");
 });
 
+test("Heisig-Reihenfolge stimmt mit der deutschen Ausgabe überein", () => {
+  eq(Heisig.TOTAL, 2200);
+  const expected = { 137: "水", 402: "歴", 540: "曽", 1934: "共", 2173: "関" }; // Wasser, Zeitablauf, zuvor, zusammen, Zusammenhang
+  for (const [n, k] of Object.entries(expected)) eq(Heisig.frame(Number(n)).kanji, k, `Rahmen ${n}`);
+  for (let n = 1; n <= 2200; n++) if (Heisig.frame(n).n !== n) throw new Error(`Lücke bei Rahmen ${n}`);
+});
+
+test("Heisig: Rahmen nur in Reihenfolge, Tageslimit, keine doppelten Karten", () => {
+  const T = at(17, 10);
+  Heisig.learn(1, "eins", "", T);
+  eq(Heisig.unlocked, 1); eq(Heisig.nextFrame(), 2); eq(Heisig.status(1), "box1");
+  let threw = false;
+  try { Heisig.learn(5, "x", "", T); } catch { threw = true; }
+  eq(threw, true, "Sprung in der Reihenfolge");
+  for (let n = 2; n <= 10; n++) Heisig.learn(n, "", "", T);
+  eq(Heisig.newAllowance(T), 0, "Tageslimit 10");
+  eq(Store.db.heisig.cards.length, 10);
+  eq(Heisig.promptText(2), `(engl.) ${Heisig.frame(2).en.split(", ")[0]}`, "Ersatz ohne Schlüsselwort");
+});
+
+test("Heisig: „bis Rahmen X gelernt“ verteilt die Wiederholungen über zwei Wochen", () => {
+  const T = at(17, 10);
+  const added = Heisig.markLearnedUntil(40, T);
+  eq(added, 30); eq(Heisig.unlocked, 40);
+  const due = new Set(Store.db.heisig.cards.filter(c => c.frame > 10).map(c => c.dueAt));
+  eq(due.size, 14, "verschiedene Fälligkeitstage");
+  eq(Heisig.dueCards(T).length, 10, "heute nur die neu gelernten fällig");
+});
+
+test("Strichfolgen-Datei pro 200 Rahmen", () => {
+  eq(KanjiStrokes.fileFor(1), "data/strokes/0001-0200.js");
+  eq(KanjiStrokes.fileFor(200), "data/strokes/0001-0200.js");
+  eq(KanjiStrokes.fileFor(201), "data/strokes/0201-0400.js");
+  eq(KanjiStrokes.fileFor(2200), "data/strokes/2001-2200.js");
+});
+
 const failed = results.filter(r => !r.ok).length;
 document.getElementById("summary").innerHTML = failed
   ? `<span class="fail">${failed} von ${results.length} Tests fehlgeschlagen</span>`

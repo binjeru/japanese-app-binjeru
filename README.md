@@ -16,6 +16,7 @@ Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge un
 - **Wortschatz-Check** – nach einer Geschichte: Wort zeigen, überlegen, aufdecken; „Gewusst“ = bekannt, „Nicht gewusst“ = Merkliste
 - **Merkliste** – gesammelte Wörter mit Beispielsatz und Herkunft; höchstens 12 neue Karten pro Tag aktivieren (weniger, wenn viele Wiederholungen anstehen)
 - **Lernkartei** – 4 Fächer: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen* (ohne Furigana), *Langzeit*. Von jeder Karte zurück zur Stelle in der Geschichte
+- **Kanji** – eigenständige Heisig-Kartei („Die Kanji lernen und behalten 1“, 2200 Rahmen): Rahmen strikt in Heisigs Reihenfolge freischalten, eigenes Schlüsselwort und eigene Geschichte eintragen, Strichfolge als Animation; Abfrage vom Schlüsselwort zum Kanji (auf Papier schreiben, dann aufdecken). Neue Rahmen pro Tag einstellbar, bereits Gelerntes übernehmbar. In den Wortdetails der Geschichten steht nur zur Info, welche Rahmen die Kanji eines Wortes haben
 - **Profil** – bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Kana-Übung
 
 Tastatur: Player `Leertaste` Play/Pause, `←`/`→` Satz, `R` Satz wiederholen · Check/Lernkartei `Leertaste` aufdecken, `1` Noch nicht, `2` Gewusst · `Esc` schließt die Wortdetails.
@@ -29,6 +30,9 @@ js/content.js    bereitet Geschichten auf: Satz-IDs, Wortvorkommen, Häufigkeite
 js/scheduler.js  Wiederholungsplanung – reine Funktionen, getestet in js/scheduler.test.js
 js/store.js      Datenschicht (localStorage): Merkliste, Karten, Wiederholungshistorie, Fortschritt
 js/speech.js     Sprachausgabe (Platzhalter bis echte Aufnahmen vorliegen)
+js/strokes.js    lädt und animiert Strichfolgen (KanjiVG)
+js/heisig.js     Heisig-Kartei: Reihenfolge, Freischalten, Wiederholung (ohne UI)
+js/kanji-view.js Oberfläche der Kanji-Rubrik
 js/player.js     Geschichtenplayer + Wortdetails
 js/app.js        Navigation und übrige Ansichten
 ```

@@ -21,6 +21,13 @@
   <script src="js/util.js"></script>
   <script src="js/content.js"></script>
   <script src="js/scheduler.js"></script>
+  <script src="data/kanji.js"></script>
+  <script>
+    // Platzhalter für die Datenschicht: Tests dürfen den echten Lernstand im Browser nicht verändern
+    const Store = { db: { heisig: { frames: {}, cards: [], reviews: [], unlocked: 0, activations: {}, newPerDay: 10 } }, persist() {}, touchDay() {} };
+  </script>
+  <script src="js/strokes.js"></script>
+  <script src="js/heisig.js"></script>
   <script src="js/scheduler.test.js"></script>
 </body>
 </html>

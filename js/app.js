@@ -84,6 +84,11 @@ RENDER.today = () => {
       <div class="stat"><b>${Store.streak()}</b><span>Lerntage in Folge</span></div>
     </div>
     <div class="panel today-next">${next}</div>
+    <button class="panel today-kanji" data-goto="kanji">
+      <span class="jp">漢</span>
+      <span><b>Kanji nach Heisig</b> · Rahmen ${Heisig.unlocked} von ${Heisig.TOTAL}${Heisig.dueCards(now).length ? ` · <b>${Heisig.dueCards(now).length}</b> fällig` : ""}</span>
+      <span class="hint">→</span>
+    </button>
     ${recent.length ? `<div class="panel"><h3>Zuletzt gelernt & gesammelt</h3><div class="chips">${recent.map(r =>
       `<span class="chip"><span class="jp">${wordHtml(r.vid)}</span> ${escapeHtml(DICT[r.vid].de)} <small>${r.label}</small></span>`).join("")}</div></div>` : ""}`;
 };
@@ -472,7 +477,7 @@ $("#profile").addEventListener("click", e => {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   } else if (act.dataset.act === "reset") {
-    if (!confirm("Wirklich den gesamten Lernstand löschen (Merkliste, Lernkartei, Fortschritt)?")) return;
+    if (!confirm("Wirklich den gesamten Lernstand löschen (Merkliste, Lernkartei, Kanji, Fortschritt)?")) return;
     Store.reset();
     RENDER.profile();
     toast("Lernstand zurückgesetzt");
@@ -487,6 +492,7 @@ $("#profile").addEventListener("change", e => {
 });
 
 RENDER.kana = () => KanaPractice.refresh();
+RENDER.kanji = () => KanjiView.render();
 
 // ---------- Tastatur ----------
 document.addEventListener("keydown", e => {
@@ -496,6 +502,7 @@ document.addEventListener("keydown", e => {
   else if (currentView === "check") Check.onKey(e);
   else if (currentView === "deck") Deck.onKey(e);
   else if (currentView === "kana") KanaPractice.onKey(e);
+  else if (currentView === "kanji") KanjiView.onKey(e);
 });
 
 // ---------- Start ----------

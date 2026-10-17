@@ -284,6 +284,49 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .flash-ex .jp { font-size: 1.2rem; line-height: 2.1; margin: 0; }
 .rate-row { margin-top: 20px; }
 
+/* ---------- Kanji (Heisig) ---------- */
+.today-kanji { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer; color: var(--text); font: inherit; }
+.today-kanji:hover { border-color: var(--accent); }
+.today-kanji > .jp { font-size: 2rem; color: var(--accent); }
+.today-kanji > span:nth-child(2) { flex: 1; }
+.kanji-progress-row { display: flex; justify-content: space-between; align-items: baseline; }
+.boxes4.compact { margin-bottom: 16px; }
+.boxes4.compact .box4-count { font-size: 1.5rem; }
+.block-tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 6px; margin-bottom: 10px; }
+.block-tabs button { flex: none; border: 1px solid var(--border); background: var(--bg); border-radius: 8px; padding: 4px 10px; font-size: .8rem; color: var(--muted); }
+.block-tabs button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.kanji-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 4px; }
+.kcell { border: 1px solid transparent; border-radius: 8px; padding: 4px 0 2px; display: flex; flex-direction: column; align-items: center; background: var(--l0); line-height: 1.1; }
+.kcell span { font-size: 1.35rem; }
+.kcell small { font-size: .62rem; color: var(--muted); }
+.kcell:hover { border-color: var(--accent); }
+.kcell.st-locked span { opacity: .3; }
+.st-box1 { background: var(--b1); } .st-box2 { background: var(--b2); } .st-box3 { background: var(--b3); } .st-box4 { background: var(--b4); }
+.st-learned { background: var(--b4); }
+.legend-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 12px 0 0; }
+.kdot { display: inline-block; width: 14px; height: 14px; border-radius: 4px; background: var(--l0); margin-left: 8px; }
+.frame-no { color: var(--muted); font-size: .9rem; text-align: center; }
+.kanji-learn { max-width: 640px; margin-left: auto; margin-right: auto; }
+.kanji-stage { width: 200px; height: 200px; margin: 8px auto; position: relative; }
+.kanji-svg { width: 100%; height: 100%; background: var(--bg); border-radius: 14px; }
+.kanji-svg .grid { stroke: var(--border); stroke-width: .6; stroke-dasharray: 2 2; fill: none; }
+.kanji-svg .ghost path { fill: none; stroke: var(--border); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.kanji-svg .ink path { fill: none; stroke: var(--text); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.kanji-svg .nums text { font-size: 7px; fill: var(--accent); font-family: system-ui, sans-serif; }
+.kanji-fallback { font-size: 150px; line-height: 200px; text-align: center; color: var(--border); }
+.kanji-stage .hint { position: absolute; bottom: -24px; left: 0; right: 0; text-align: center; }
+.kanji-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: .88rem; color: var(--muted); margin: 10px 0 16px; }
+.kanji-keyword { font-size: 2.2rem; font-weight: 700; margin: 6px 0 10px; }
+.kanji-story { background: var(--bg); border-radius: 10px; padding: 8px 14px; margin: 0 auto 10px; max-width: 480px; font-style: italic; white-space: pre-wrap; }
+.text-input, .num-input { font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; width: 100%; }
+.text-input:focus, .num-input:focus { outline: none; border-color: var(--accent); }
+textarea.text-input { resize: vertical; }
+.num-input { width: 110px; }
+.ws-kanji { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; font-size: .85rem; color: var(--muted); }
+.ws-kanji span { background: var(--bg); border-radius: 8px; padding: 3px 9px; }
+.ws-kanji span.learned { color: var(--good); background: var(--good-soft); }
+.ws-kanji b { font-size: 1.05rem; color: var(--text); }
+
 /* ---------- Profil ---------- */
 .progress-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .progress-table td { padding: 8px 6px; border-bottom: 1px solid var(--border); }
@@ -335,7 +378,7 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; justify-content: space-around; gap: 0;
     background: var(--surface); border-top: 1px solid var(--border); padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
   }
-  .tabs button { flex-direction: column; gap: 0; padding: 6px 4px; border-radius: 10px; font-size: .72rem; flex: 1; }
+  .tabs button { flex-direction: column; gap: 0; padding: 6px 2px; border-radius: 10px; font-size: .68rem; flex: 1; min-width: 0; }
   .tabs .ti { font-size: 1.15rem; }
   main { padding: 20px 16px 96px; }
   h1 { font-size: 1.6rem; }

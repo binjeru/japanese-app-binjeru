@@ -15,6 +15,8 @@ const Store = (() => {
     activations: {},   // Datum → Anzahl aktivierter Karten
     days: [],          // Tage mit Lernaktivität
     kana: {},          // Kana-Übungsstatistik
+    // Heisig-Kanji: eigene Kartei. frames: Rahmen → { keyword, story }; unlocked: höchster freigeschalteter Rahmen
+    heisig: { frames: {}, cards: [], reviews: [], unlocked: 0, activations: {}, newPerDay: 10 },
     prefs: { furi: true, romaji: false, de: false, speed: "1", mode: "read", topics: [] },
     currentStoryId: null,
   });
@@ -24,6 +26,7 @@ const Store = (() => {
   const isNew = !db;
   db = Object.assign(fresh(), db || {});
   db.prefs = Object.assign(fresh().prefs, db.prefs);
+  db.heisig = Object.assign(fresh().heisig, db.heisig);
 
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* z. B. privater Modus */ }
@@ -160,6 +163,7 @@ const Store = (() => {
     const data = JSON.parse(text);
     if (!data || data.version !== 1 || !Array.isArray(data.cards)) throw new Error("Keine gültige Sicherung");
     db = Object.assign(fresh(), data);
+    db.heisig = Object.assign(fresh().heisig, db.heisig);
     persist();
   }
   function reset() {

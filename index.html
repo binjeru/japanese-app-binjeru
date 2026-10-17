@@ -14,6 +14,7 @@
       <button data-view="library"><span class="ti">話</span>Geschichten</button>
       <button data-view="saved"><span class="ti">栞</span>Merkliste</button>
       <button data-view="deck"><span class="ti">札</span>Lernkartei</button>
+      <button data-view="kanji"><span class="ti">漢</span>Kanji</button>
       <button data-view="profile"><span class="ti">私</span>Profil</button>
     </nav>
   </header>
@@ -48,6 +49,11 @@
     <section id="view-deck" class="view">
       <h1>札 <small>Lernkartei</small></h1>
       <div id="deck"></div>
+    </section>
+
+    <section id="view-kanji" class="view">
+      <h1>漢字 <small>Kanji nach Heisig</small></h1>
+      <div id="kanji"></div>
     </section>
 
     <section id="view-profile" class="view">
@@ -106,15 +112,19 @@
   <script src="data/dictionary.js"></script>
   <script src="data/stories.js"></script>
   <script src="data/frequency.js"></script>
+  <script src="data/kanji.js"></script>
   <!-- Logik (ohne UI) -->
   <script src="js/util.js"></script>
   <script src="js/content.js"></script>
   <script src="js/scheduler.js"></script>
   <script src="js/store.js"></script>
   <script src="js/speech.js"></script>
+  <script src="js/strokes.js"></script>
+  <script src="js/heisig.js"></script>
   <!-- Oberfläche -->
   <script src="js/player.js"></script>
   <script src="js/kana.js"></script>
+  <script src="js/kanji-view.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
