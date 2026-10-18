@@ -622,7 +622,15 @@ $("#profile").addEventListener("click", e => {
       .then(() => { toast("Mit GitHub verbunden"); RENDER.profile(); })
       .catch(err => { toast(err.message); act.disabled = false; });
   } else if (act.dataset.act === "sync-now") {
-    Sync.now();
+    act.disabled = true;
+    Sync.now()
+      .then(() => {
+        if (Sync.state.status === "error") throw new Error(Sync.state.message);
+        return OwnStories.refresh(true);
+      })
+      .then(any => toast(any ? "Abgeglichen – eigene Geschichten aktualisiert" : "Abgeglichen ✓"))
+      .catch(err => toast(`Abgleich fehlgeschlagen: ${err.message}`))
+      .finally(() => { act.disabled = false; if (currentView === "profile") RENDER.profile(); });
   } else if (act.dataset.act === "sync-off") {
     if (!confirm("Abgleich trennen? Das Token wird aus diesem Browser gelöscht; der Lernstand bleibt hier und auf GitHub erhalten.")) return;
     Sync.disconnect();

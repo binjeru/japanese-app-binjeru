@@ -143,6 +143,9 @@ const Sync = (() => {
         if (!cfg.sha && isEmpty(Store.db)) await adopt(remote);
         else { state.conflict = { remote, local: Store.db.updatedAt }; set("conflict"); return; }
       } else if (dirty) await upload(remote.sha);
+      // Auch ohne Änderung gilt: eben erfolgreich nachgesehen
+      cfg.lastSync = Date.now();
+      save();
       set("ok");
     } catch (err) {
       if (err.status === 409 || err.status === 422) again = true;   // Datei wurde zwischendurch geändert
