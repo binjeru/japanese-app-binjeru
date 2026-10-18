@@ -511,7 +511,8 @@ RENDER.profile = () => {
       </div>
     </div>
     <p class="hint on-page">Quellen: Häufigkeitsränge aus dem Leeds Internet Corpus (CC BY 2.5) ·
-      Kanji-Daten aus KANJIDIC2, EDRDG (CC BY-SA 4.0) · Strichfolgen aus KanjiVG, Ulrich Apel (CC BY-SA 3.0)</p>`;
+      Kanji-Daten aus KANJIDIC2, EDRDG (CC BY-SA 4.0) · Strichfolgen aus KanjiVG, Ulrich Apel (CC BY-SA 3.0) ·
+      Sprachaufnahmen: VOICEVOX:夜語トバリ</p>`;
 };
 // Abgleich über ein privates GitHub-Repo (js/sync.js)
 function syncPanel() {

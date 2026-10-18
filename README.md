@@ -69,7 +69,17 @@ js/app.js        Navigation und übrige Ansichten
   Kanji-Daten und Strichfolgen werden mit `tools/build-kanji.ps1` erzeugt; für diese Dateien gilt die jeweilige Share-Alike-Lizenz.
 - **Bedeutungsvorschläge in der Werkstatt** (`data/werkstatt/jmdict-de.js`): deutsche Glossen aus [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) der EDRDG, CC BY-SA 4.0, erzeugt mit `tools/build-jmdict-de.ps1`. Wird nur von der Werkstatt geladen, nicht von der App.
 - **Geschichten:** eigene Texte und Nacherzählungen gemeinfreier Märchen (z. B. Momotarō). 「手袋を買いに」 von 新美南吉 (Niimi Nankichi, 1913–1943) stammt aus [Aozora Bunko](https://www.aozora.gr.jp/cards/000121/card637.html) (gemeinfrei) und ist ungekürzt übernommen; Wortzerlegung und deutsche Übersetzung sind eigene Arbeit.
+- **Sprachaufnahmen** (`data/audio/`): erzeugt mit [VOICEVOX](https://voicevox.hiroshiba.jp), Stimme **VOICEVOX:夜語トバリ** (ノーマル). Nutzung laut [Bedingungen der Stimme](https://yogataritobari.studio.site/#rules) mit dieser Nennung, nicht kommerziell.
 - Heisigs Schlüsselwörter und Geschichten sind urheberrechtlich geschützt und nicht enthalten.
+
+## Sprachaufnahmen erzeugen
+
+Die Geschichten werden Satz für Satz mit VOICEVOX vertont (eine MP3 pro Satz, `data/audio/<id>/<szene>-<satz>.mp3`). Der Player spielt die Aufnahme ab, wenn der Katalogeintrag ein `audio`-Feld hat, und nutzt sonst die Sprachausgabe des Browsers; einzelne Wörter in den Wortdetails spricht weiterhin der Browser.
+
+1. VOICEVOX starten (die Engine läuft dann auf http://127.0.0.1:50021); ffmpeg muss installiert sein.
+2. `powershell -ExecutionPolicy Bypass -File tools/build-audio.ps1 -Story <id>` – erzeugt nur neue oder geänderte Sätze (`manifest.json`). Standardstimme ist 118 (夜語トバリ ノーマル), andere mit `-Speaker <id>`.
+3. Das Skript vergleicht VOICEVOX' Lesung mit den Lesungen im Wörterbuch und listet Abweichungen. Liest VOICEVOX ein Wort falsch, im Wörterbucheintrag `tts: "かな"` ergänzen und das Skript erneut starten.
+4. Im Katalog (`data/stories/index.js`) beim Eintrag `audio: { path: "data/audio/<id>/", credit: "VOICEVOX:夜語トバリ" }` ergänzen.
 
 ## Werkstatt: neue Geschichten aufbereiten
 

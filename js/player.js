@@ -9,6 +9,13 @@ const Player = (() => {
   const prefs = () => Store.db.prefs;
   function setMode(mode) { prefs().mode = mode; Store.persist(); modeSeg.set(mode); applyPrefs(); }
 
+  // Sprachaufnahmen (falls vorhanden): ein Audio-Element für die Wiedergabe, eines lädt den nächsten Satz vor
+  const audio = new Audio();
+  const preload = new Audio();
+  preload.preload = "auto";
+  audio.preload = "auto";
+  const hasAudio = () => !!(P && P.story.audio);
+
   function open(storyId, position) {
     // Wie bei der echten Lernkartei: erst die fälligen Karten, dann die Geschichte
     if (!Store.gateOpen()) {
@@ -37,7 +44,8 @@ const Player = (() => {
     root.innerHTML = `
       <div class="pl-head">
         <button class="secondary" data-act="back">← Bibliothek</button>
-        <span class="audio-badge" title="Für diese Geschichte gibt es noch keine Audioaufnahme.">🔈 Sprachausgabe · Platzhalter</span>
+        ${s.audio ? `<span class="audio-badge rec" title="Sprachaufnahme, erzeugt mit VOICEVOX">🎙 ${escapeHtml(s.audio.credit)}</span>`
+          : `<span class="audio-badge" title="Für diese Geschichte gibt es noch keine Audioaufnahme.">🔈 Sprachausgabe · Platzhalter</span>`}
       </div>
       <h2 class="pl-title">${levelBadge(s.level)} <span class="jp">${s.titleJp}</span> <small>${escapeHtml(s.titleDe)}</small></h2>
       <div class="scene-tabs" id="pl-scenes">${s.scenes.map((sc, i) =>
@@ -64,7 +72,7 @@ const Player = (() => {
           <label><input type="checkbox" data-pref="de"> Deutsch</label>
         </div>
       </div>`;
-    segmented($("#pl-speed", root), prefs().speed, v => { prefs().speed = v; Store.persist(); });
+    segmented($("#pl-speed", root), prefs().speed, v => { prefs().speed = v; Store.persist(); audio.playbackRate = Number(v); });
     modeSeg = segmented($("#pl-mode", root), prefs().mode, v => { prefs().mode = v; Store.persist(); applyPrefs(); });
     $$("[data-pref]", root).forEach(box => {
       box.checked = prefs()[box.dataset.pref];
@@ -89,7 +97,8 @@ const Player = (() => {
     const el = $("#pl-voice", root);
     if (!el) return;
     let msg = "";
-    if (!Speech.supported) msg = "Dein Browser unterstützt keine Sprachausgabe – du kannst die Geschichte aber lesen.";
+    if (hasAudio()) msg = "";
+    else if (!Speech.supported) msg = "Dein Browser unterstützt keine Sprachausgabe – du kannst die Geschichte aber lesen.";
     else if (!Speech.hasVoice) msg = "Keine japanische Stimme gefunden. In Edge und Chrome ist meist eine dabei; unter Windows sonst: Einstellungen → Zeit und Sprache → Sprache → Japanisch hinzufügen.";
     el.textContent = msg;
     el.classList.toggle("hidden", !msg);
@@ -171,7 +180,7 @@ const Player = (() => {
   }
 
   function playFrom(idx, continuous = true) {
-    if (!Speech.supported) { toast("Dein Browser hat keine Sprachausgabe."); return; }
+    if (!hasAudio() && !Speech.supported) { toast("Dein Browser hat keine Sprachausgabe."); return; }
     if (!P.started) { P.started = true; Store.startedListening(P.story.id); }
     const run = ++P.run;
     P.playing = true;
@@ -182,26 +191,57 @@ const Player = (() => {
     const li = $(`.sent[data-idx="${idx}"]`, root);
     if (li && prefs().mode === "read") li.scrollIntoView({ block: "nearest", behavior: "smooth" });
     const s = P.story.flat[idx];
-    const u = Speech.utterance(s.text, RATE_BASE * Number(prefs().speed));
-    u.onboundary = e => { if (P && run === P.run) highlightWord(s, e.charIndex); };
-    u.onerror = e => {
-      if (!P || run !== P.run || e.error === "interrupted" || e.error === "canceled") return;
-      P.playing = false;
-      updatePlayBtn();
-      toast("Sprachausgabe fehlgeschlagen.");
-    };
-    u.onend = () => {
+    const done = () => {
       if (!P || run !== P.run) return;
       highlightWord(null);
       Store.encounter(s.vocabIds.filter(v => v && Content.isLearnable(v)));
       if (continuous && idx + 1 < P.story.flat.length) {
-        setTimeout(() => { if (P && run === P.run && P.playing) playFrom(idx + 1, true); }, 500);
+        setTimeout(() => { if (P && run === P.run && P.playing) playFrom(idx + 1, true); }, hasAudio() ? 350 : 500);
         return;
       }
       P.playing = false;
       updatePlayBtn();
       if (continuous) finish();
     };
+    const failed = msg => {
+      if (!P || run !== P.run) return;
+      P.playing = false;
+      updatePlayBtn();
+      toast(msg);
+    };
+    const url = Content.audioUrl(s);
+    if (url) playRecording(s, url, run, done, () => speakTts(s, run, done, failed));
+    else speakTts(s, run, done, failed);
+    // nächsten Satz schon laden, damit es ohne Pause weitergeht
+    const next = P.story.flat[idx + 1];
+    const nextUrl = continuous && next && Content.audioUrl(next);
+    if (nextUrl && !preload.src.endsWith(nextUrl)) preload.src = nextUrl;
+  }
+
+  // Aufnahme abspielen; Wortmarkierung anteilig zur Spielzeit (Aufnahmen haben keine Wortgrenzen)
+  function playRecording(s, url, run, done, fallback) {
+    Speech.cancel();
+    audio.onended = () => { if (P && run === P.run) done(); };
+    audio.onerror = () => { if (P && run === P.run) fallback(); };
+    audio.ontimeupdate = () => {
+      if (!P || run !== P.run || !audio.duration) return;
+      highlightWord(s, Math.floor((audio.currentTime / audio.duration) * s.text.length));
+    };
+    if (!audio.src.endsWith(url)) audio.src = url;
+    else audio.currentTime = 0;
+    audio.playbackRate = Number(prefs().speed);
+    audio.play().catch(err => { if (err.name !== "AbortError" && P && run === P.run) fallback(); });
+  }
+
+  function speakTts(s, run, done, failed) {
+    if (!Speech.supported) { failed("Aufnahme fehlt und der Browser hat keine Sprachausgabe."); return; }
+    const u = Speech.utterance(s.text, RATE_BASE * Number(prefs().speed));
+    u.onboundary = e => { if (P && run === P.run) highlightWord(s, e.charIndex); };
+    u.onerror = e => {
+      if (!P || run !== P.run || e.error === "interrupted" || e.error === "canceled") return;
+      failed("Sprachausgabe fehlgeschlagen.");
+    };
+    u.onend = done;
     Speech.play(u);
   }
 
@@ -218,6 +258,7 @@ const Player = (() => {
     P.run++;
     P.playing = false;
     Speech.cancel();
+    audio.pause();
     highlightWord(null);
     updatePlayBtn();
   }
@@ -275,7 +316,20 @@ const Player = (() => {
     else if (e.key === "Enter" && e.target.classList.contains("tok")) { pause(); WordSheet.open(e.target.dataset.k, e.target.dataset.sid); }
   }
 
-  return { open, pause, onKey, refreshStatus, playSentence: id => { const s = Content.sentence(id); if (s) Speech.say(s.text, RATE_BASE); } };
+  // Einzelnen Satz vorspielen (Lernkartei, Merkliste): Aufnahme, sonst Browser-Stimme
+  function playSentence(id) {
+    const s = Content.sentence(id);
+    if (!s) return;
+    const url = Content.audioUrl(s);
+    if (!url) { Speech.say(s.text, RATE_BASE); return; }
+    Speech.cancel();
+    audio.onended = audio.onerror = audio.ontimeupdate = null;
+    audio.src = url;
+    audio.playbackRate = 1;
+    audio.play().catch(() => Speech.say(s.text, RATE_BASE));
+  }
+
+  return { open, pause, onKey, refreshStatus, playSentence };
 })();
 
 // Wortdetailansicht (Bottom-Sheet)

@@ -8,6 +8,7 @@
 //   note: Grammatik-Hinweis
 //   ro:   Romaji, falls die automatische Umschrift nicht passt (Partikel は = wa)
 //   say:  abweichende Aussprache für die Sprachausgabe
+//   tts:  Text für VOICEVOX-Aufnahmen, wenn VOICEVOX das Wort falsch liest (tools/build-audio.ps1)
 const DICT = {
   // ---------- Partikel & Grammatik ----------
   "の": { ro: "no", de: "von / -s (verbindet Nomen); nach Adjektiv/Verb: „der/die/das …“; am Satzende: erklärend", pos: "Partikel", note: "わたしのねこ = meine Katze · 赤いの = ein roter" },
@@ -33,7 +34,7 @@ const DICT = {
   "ゆき": { ro: "Yuki", de: "Yuki (Vorname; auch: Schnee)", pos: "Name" },
   "タマ": { ro: "Tama", de: "Tama (Name der Katze)", pos: "Name" },
   "ふじさん": { ro: "Fuji-san", de: "der Berg Fuji", k: "富士山", pos: "Name" },
-  "日本": { r: "にほん", ro: "Nihon", de: "Japan", pos: "Name" },
+  "日本": { r: "にほん", ro: "Nihon", de: "Japan", pos: "Name", tts: "にほん" },
   "東京": { r: "とうきょう", ro: "Tōkyō", de: "Tokio", pos: "Name" },
 
   // ---------- Nomen & Pronomen ----------
@@ -55,7 +56,7 @@ const DICT = {
   "約束": { r: "やくそく", de: "Versprechen / Verabredung", pos: "Nomen", note: "約束する = versprechen / sich verabreden" },
   "手紙": { r: "てがみ", de: "Brief", pos: "Nomen" },
   "かばん": { de: "Tasche", k: "鞄", pos: "Nomen" },
-  "中": { r: "なか", de: "innen / in", pos: "Nomen", note: "…の中に = in …" },
+  "中": { r: "なか", de: "innen / in", pos: "Nomen", note: "…の中に = in …", tts: "なか" },
   "下": { r: "した", de: "unten / unter", pos: "Nomen", note: "…の下に = unter …" },
   "した": { base: "下" },
   "前": { r: "まえ", de: "vorne / vor", pos: "Nomen", note: "…の前に = vor …" },
@@ -85,7 +86,7 @@ const DICT = {
   "こうえん": { ro: "kōen", de: "Park", k: "公園", pos: "Nomen" },
   "でんしゃ": { de: "Zug / Bahn", k: "電車", pos: "Nomen" },
   "き": { de: "Baum", k: "木", pos: "Nomen" },
-  "山": { r: "やま", de: "Berg", pos: "Nomen" },
+  "山": { r: "やま", de: "Berg", pos: "Nomen", tts: "やま" },
   "そら": { de: "Himmel", k: "空", pos: "Nomen" },
   "てんき": { de: "Wetter", k: "天気", pos: "Nomen" },
   "あさひ": { de: "Morgensonne", k: "朝日", pos: "Nomen" },
@@ -138,7 +139,7 @@ const DICT = {
   "少し": { r: "すこし", de: "ein bisschen", pos: "Adverb" },
   "でも": { de: "aber", pos: "Konjunktion" },
   "この": { de: "diese(r/s)", pos: "Demonstrativ" },
-  "何": { r: "なん", de: "was", pos: "Fragewort", note: "何の… = was für ein …" },
+  "何": { r: "なん", de: "was", pos: "Fragewort", note: "何の… = was für ein …", tts: "なん" },
   "何も": { r: "なにも", de: "nichts (mit Verneinung)", pos: "Ausdruck" },
   "おめでとう": { de: "Herzlichen Glückwunsch!", pos: "Ausdruck" },
   "ください": { de: "bitte (…てください = bitte tu …)", pos: "Hilfsverb" },

@@ -170,6 +170,7 @@ rt { font-size: .5em; color: var(--muted); }
 .player { padding: 20px 24px 0; }
 .pl-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .audio-badge { font-size: .78rem; color: var(--saved); border: 1px dashed var(--saved); border-radius: 999px; padding: 3px 10px; }
+.audio-badge.rec { color: var(--good); border: 1px solid var(--good); }
 .pl-title { margin: 14px 0 10px; font-size: 1.5rem; }
 .scene-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
 .scene-tabs button { flex: none; border: 1px solid var(--border); background: var(--bg); border-radius: 999px; padding: 5px 12px; font-family: var(--jp); font-size: .88rem; color: var(--muted); }

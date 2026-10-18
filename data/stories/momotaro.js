@@ -91,7 +91,7 @@ Content.register({
     "もも": { de: "Pfirsich", k: "桃", pos: "Nomen" },
     "男の子": { r: "おとこのこ", de: "Junge", pos: "Nomen" },
     "二人": { r: "ふたり", de: "zwei Personen; die beiden", pos: "Nomen" },
-    "鬼": { r: "おに", de: "Dämon, Oger (Oni)", pos: "Nomen" },
+    "鬼": { r: "おに", de: "Dämon, Oger (Oni)", pos: "Nomen", tts: "おに" },
     "村": { r: "むら", de: "Dorf", pos: "Nomen" },
     "ころ": { de: "Zeit, als …; um (ungefähr)", k: "頃", pos: "Nomen", note: "そのころ = zu jener Zeit" },
     "たいじ": { de: "Bekämpfung, Vertreiben (von Bösem)", k: "退治", pos: "Nomen", note: "たいじする = besiegen, vertreiben" },

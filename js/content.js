@@ -156,6 +156,12 @@ const Content = (() => {
     return { pct: total ? Math.round((known / total) * 100) : 100, unknownWords: unknownWords.size, words: Object.keys(story.freq).filter(isLearnable).length };
   }
 
+  // Sprachaufnahme eines Satzes (null = keine, dann Browser-Stimme)
+  function audioUrl(s) {
+    const m = s && meta(s.storyId);
+    return m && m.audio ? `${m.audio.path}${s.sceneIndex + 1}-${s.indexInScene + 1}.mp3` : null;
+  }
+
   // Erster Beispielsatz zu einem Wort aus irgendeiner geladenen Geschichte
   function firstSentenceAny(vid) {
     for (const m of catalog) {
@@ -170,6 +176,6 @@ const Content = (() => {
     get stories() { return catalog.map(m => storiesById[m.id]).filter(Boolean); },
     story: id => storiesById[id] || null, sentence: id => sentences[id] || null,
     vocab, vocabIdOf, display, reading, isLearnable, sayText, globalFreq, rank, byRank,
-    romajiLine, sentenceHtml, storyVocab, coverage, firstSentenceAny,
+    romajiLine, sentenceHtml, storyVocab, coverage, firstSentenceAny, audioUrl,
   };
 })();
