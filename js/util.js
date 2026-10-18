@@ -97,3 +97,9 @@ function toast(msg) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
 }
+
+// Service Worker (sw.js): sorgt dafür, dass nach einem Update einfaches Neuladen genügt, und hält
+// die App offline verfügbar. Nur über http(s) möglich, nicht beim Öffnen als Datei.
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => { /* ohne Service Worker geht die App trotzdem */ });
+}

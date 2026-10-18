@@ -7,6 +7,8 @@ Reines HTML, CSS und JavaScript, ohne Installation und ohne Abhängigkeiten.
 
 `index.html` im Browser öffnen. Fertig. (Die Tests laufen über `tests.html`.)
 
+Online unter https://binjeru.github.io/japanese-app-binjeru/. Ein Service Worker (`sw.js`) holt dort bei jedem Laden die aktuellen Dateien – nach einem Update genügt also einfaches Neuladen – und hält die zuletzt geladene Version für den Offline-Betrieb bereit.
+
 Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge und Chrome meist vorhanden, unter Windows sonst über *Einstellungen → Zeit und Sprache → Sprache → Japanisch* nachinstallieren.
 
 ## Bereiche
@@ -34,7 +36,8 @@ Tastatur: Player `Leertaste` Play/Pause, `←`/`→` Satz, `R` Satz wiederholen 
 
 ```
 data/        Inhalte: Wörterbuch (dictionary.js), Geschichten (stories.js), Kana (kana.js)
-js/util.js       Hilfsfunktionen (Furigana, Romaji, …)
+js/util.js       Hilfsfunktionen (Furigana, Romaji, …), meldet den Service Worker an
+sw.js            Service Worker: immer zuerst frisch vom Server, Reserve für offline
 js/content.js    bereitet Geschichten auf: Satz-IDs, Wortvorkommen, Häufigkeiten
 js/scheduler.js  Wiederholungsplanung – reine Funktionen, getestet in js/scheduler.test.js
 js/store.js      Datenschicht (localStorage): Merkliste, Karten, Wiederholungshistorie, Fortschritt
