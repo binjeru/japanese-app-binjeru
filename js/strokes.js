@@ -44,18 +44,20 @@ const KanjiStrokes = (() => {
         <g class="nums">${nums}</g>
       </svg>`;
     if (!animate) return;
+    // CSS-Animation je Strich (Keyframes „kanji-draw“ in style.css): wartet mit leerem Strich auf
+    // ihren Einsatz, wird dann gezogen und kurz rot hervorgehoben; die Nummer erscheint mit dem Strich
     const ink = [...el.querySelectorAll(".ink path")];
-    let delay = 0.15;
-    for (const p of ink) {
-      const len = p.getTotalLength();
-      const dur = Math.max(0.25, len / 110);
+    const numEls = [...el.querySelectorAll(".nums text")];
+    let delay = 0.3;
+    ink.forEach((p, i) => {
+      const len = Math.ceil(p.getTotalLength()) + 1;
+      const dur = Math.max(0.35, len / 90);
+      p.style.setProperty("--len", len);
       p.style.strokeDasharray = `${len} ${len}`;
-      p.style.strokeDashoffset = len;
-      p.style.transition = `stroke-dashoffset ${dur}s linear ${delay}s`;
-      delay += dur + 0.12;
-    }
-    el.getBoundingClientRect(); // Reflow, damit der Übergang startet
-    requestAnimationFrame(() => ink.forEach(p => { p.style.strokeDashoffset = 0; }));
+      p.style.animation = `kanji-draw ${dur}s ease-in-out ${delay}s both, kanji-current ${dur + 0.25}s linear ${delay}s both`;
+      if (numEls[i]) numEls[i].style.animation = `kanji-num .2s linear ${delay}s both`;
+      delay += dur + 0.18;
+    });
   }
 
   return { add, load, get, render, fileFor };

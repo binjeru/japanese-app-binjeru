@@ -137,7 +137,7 @@ const KanjiView = (() => {
   function startReview(reviewMode = "due") {
     const cards = reviewMode === "practice" ? shuffle(Heisig.practiceCards()) : Heisig.dueQueue();
     if (!cards.length) { toast(reviewMode === "practice" ? "In Fach 1 ist heute nichts zu üben." : "Gerade ist kein Kanji fällig."); return; }
-    show("review", { reviewMode, queue: cards.map(c => c.id), revealed: false, storyOpen: false, done: 0, good: 0, again: 0 });
+    show("review", { reviewMode, queue: cards.map(c => c.id), revealed: false, storyOpen: false, drawn: [], check: null, done: 0, good: 0, again: 0 });
   }
 
   function renderReview() {
@@ -168,17 +168,52 @@ const KanjiView = (() => {
         <div class="kanji-keyword">${escapeHtml(Heisig.promptText(n))}</div>
         ${e.story ? (K.storyOpen || K.revealed ? `<div class="kanji-story">${escapeHtml(e.story)}</div>` : `<button class="link" data-k="story">Meine Geschichte zeigen</button>`) : ""}
         ${K.revealed ? `
-          <div class="kanji-stage" id="k-stage"></div>
+          ${K.check ? `
+            <div class="draw-compare">
+              <figure><div class="kanji-stage">${KanjiDraw.svg(K.drawn, K.check)}</div><figcaption class="hint">Deine Zeichnung</figcaption></figure>
+              <figure><div class="kanji-stage" id="k-stage"></div><figcaption class="hint">Richtig</figcaption></figure>
+            </div>
+            <p class="draw-verdict ${K.check.verdict}">${escapeHtml(K.check.text)}${K.check.strokes.some(s => s.reason) ? `<br><small>${K.check.strokes.map((s, i) => s.reason ? `Strich ${i + 1}: ${escapeHtml(s.reason)}` : "").filter(Boolean).join(" · ")}</small>` : ""}</p>`
+            : `<div class="kanji-stage" id="k-stage"></div>`}
           <div class="row center"><button class="secondary" data-k="replay">↻ Strichfolge</button><button class="secondary" data-k="edit">✎ Bearbeiten</button></div>
-          ${facts(k)}` : `<p class="hint">Schreib das Kanji auf Papier – dann aufdecken.</p>`}
+          ${facts(k)}` : `
+          <div class="draw-pad" id="k-pad"></div>
+          <div class="row center draw-tools">
+            <button class="secondary" data-k="undo">↶ Strich zurück</button>
+            <button class="secondary" data-k="clear">Löschen</button>
+          </div>
+          <p class="hint">Zeichne das Kanji mit dem Finger – oder schreib es auf Papier und deck einfach auf.</p>`}
         <div class="row center rate-row">
           ${K.revealed ? `
-            <button class="rate bad" data-k="again">Noch nicht <kbd>1</kbd></button>
-            <button class="rate good" data-k="good">Gewusst <kbd>2</kbd></button>`
-            : `<button class="primary big" data-k="reveal">Aufdecken <kbd>Leertaste</kbd></button>`}
+            <button class="rate bad ${K.check && K.check.verdict === "again" ? "suggest" : ""}" data-k="again">Noch nicht <kbd>1</kbd></button>
+            <button class="rate good ${K.check && K.check.verdict === "good" ? "suggest" : ""}" data-k="good">Gewusst <kbd>2</kbd></button>`
+            : `<button class="primary big" data-k="reveal" id="k-reveal">${K.drawn.length ? "Prüfen & aufdecken" : "Aufdecken"} <kbd>Leertaste</kbd></button>`}
         </div>
       </div>`;
+    KanjiStrokes.load(n).catch(() => {});   // für den Abgleich schon mal laden
     if (K.revealed) drawKanji($("#k-stage", root), n);
+    else {
+      K.pad = KanjiDraw.pad($("#k-pad", root), {
+        strokes: K.drawn,
+        onChange: st => { $("#k-reveal", root).firstChild.textContent = st.length ? "Prüfen & aufdecken " : "Aufdecken "; },
+      });
+    }
+  }
+
+  // Aufdecken; wenn gezeichnet wurde, vorher mit der Strichfolge abgleichen
+  async function reveal() {
+    const card = Store.db.heisig.cards.find(c => c.id === K.queue[0]);
+    K.check = null;
+    if (K.drawn.length) {
+      const k = Heisig.frame(card.frame);
+      try {
+        await KanjiStrokes.load(card.frame);
+        const paths = KanjiStrokes.get(k.kanji);
+        if (paths) K.check = KanjiDraw.compare(K.drawn, paths);
+      } catch { /* ohne Strichdaten einfach aufdecken */ }
+    }
+    K.revealed = true;
+    renderReview();
   }
 
   function rate(rating) {
@@ -192,6 +227,8 @@ const KanjiView = (() => {
     }
     K.revealed = false;
     K.storyOpen = false;
+    K.drawn = [];
+    K.check = null;
     renderReview();
   }
 
@@ -241,7 +278,9 @@ const KanjiView = (() => {
         break;
       }
       case "story": K.storyOpen = true; renderReview(); break;
-      case "reveal": K.revealed = true; renderReview(); break;
+      case "reveal": reveal(); break;
+      case "undo": if (K.pad) K.pad.undo(); break;
+      case "clear": if (K.pad) K.pad.clear(); break;
       case "again": rate("again"); break;
       case "good": rate("good"); break;
       case "edit": { const n = Store.db.heisig.cards.find(c => c.id === K.queue[0]).frame; show("detail", { frame: n, back: "review" }); break; }
@@ -261,7 +300,7 @@ const KanjiView = (() => {
   function onKey(e) {
     if (K.mode !== "review" || !K.queue || !K.queue.length) return;
     if (e.target.tagName === "BUTTON" && (e.key === " " || e.key === "Enter")) return;
-    if (e.key === " " && !K.revealed) { e.preventDefault(); K.revealed = true; renderReview(); }
+    if (e.key === " " && !K.revealed) { e.preventDefault(); reveal(); }
     else if (K.revealed && e.key === "1") rate("again");
     else if (K.revealed && e.key === "2") rate("good");
   }

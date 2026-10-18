@@ -328,8 +328,26 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .kanji-svg .ghost path { fill: none; stroke: var(--border); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .kanji-svg .ink path { fill: none; stroke: var(--text); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .kanji-svg .nums text { font-size: 7px; fill: var(--accent); font-family: system-ui, sans-serif; }
+@keyframes kanji-draw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+@keyframes kanji-current { from, 80% { stroke: var(--accent); } to { stroke: var(--text); } }
+@keyframes kanji-num { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .kanji-svg .ink path, .kanji-svg .nums text { animation: none !important; } }
 .kanji-fallback { font-size: 150px; line-height: 200px; text-align: center; color: var(--border); }
 .kanji-stage .hint { position: absolute; bottom: -24px; left: 0; right: 0; text-align: center; }
+/* Zeichenfläche in der Kanji-Abfrage (js/kanji-draw.js) */
+.draw-pad { width: 260px; height: 260px; max-width: 100%; margin: 12px auto 4px; }
+.draw-canvas { display: block; width: 100%; height: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; touch-action: none; cursor: crosshair; }
+.draw-tools { margin-top: 4px; }
+.draw-compare { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.draw-compare figure { margin: 0; text-align: center; }
+.draw-compare .kanji-stage { width: 150px; height: 150px; margin: 4px auto; }
+.draw-compare .kanji-fallback { font-size: 110px; line-height: 150px; }
+.drawn polyline { fill: none; stroke: var(--text); stroke-width: 4.2; stroke-linecap: round; stroke-linejoin: round; }
+.drawn .ok { stroke: var(--good); } .drawn .bad { stroke: var(--bad); }
+.draw-verdict { text-align: center; font-weight: 600; margin: 6px 0 10px; }
+.draw-verdict small { font-weight: 400; color: var(--muted); }
+.draw-verdict.good { color: var(--good); } .draw-verdict.close { color: var(--saved); } .draw-verdict.again { color: var(--bad); }
+.rate.suggest { outline: 3px solid currentColor; outline-offset: 2px; }
 .kanji-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: .88rem; color: var(--muted); margin: 10px 0 16px; }
 .kanji-keyword { font-size: 2.2rem; font-weight: 700; margin: 6px 0 10px; }
 .kanji-story { background: var(--bg); border-radius: 10px; padding: 8px 14px; margin: 0 auto 10px; max-width: 480px; font-style: italic; white-space: pre-wrap; }
