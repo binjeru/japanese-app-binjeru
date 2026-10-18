@@ -76,7 +76,7 @@ RENDER.today = () => {
     <div class="panel story-hero ${gate ? "" : "locked"}">
       <div class="story-art">${story.icon}</div>
       <div class="story-hero-body">
-        <span class="kicker">Aktuelle Geschichte</span>
+        <span class="kicker">Aktuelle Geschichte</span> ${levelBadge(story.level)}
         <h2><span class="jp">${story.titleJp}</span> <small>${escapeHtml(story.titleDe)}</small></h2>
         <div class="progress"><div class="progress-bar" style="width:${(prog.position / story.flat.length) * 100}%"></div></div>
         <p class="hint">${started ? `Satz ${prog.position + 1} von ${story.flat.length}` : "Noch nicht begonnen"} · ${prog.listenCount}× gehört</p>
@@ -120,9 +120,9 @@ RENDER.library = () => {
       <button class="story-card" data-open-story="${m.id}">
         <div class="story-art small">${m.icon}</div>
         <div class="story-card-body">
-          <b><span class="jp">${m.titleJp}</span> <small>${escapeHtml(m.titleDe)}</small></b>
+          <b>${levelBadge(m.level)} <span class="jp">${m.titleJp}</span> <small>${escapeHtml(m.titleDe)}</small></b>
           <span class="desc">${escapeHtml(m.description)}</span>
-          <span class="meta">${escapeHtml(m.level)} · ${escapeHtml(m.genre)}${s ? ` · ${s.scenes.length} ${s.scenes.length === 1 ? "Szene" : "Szenen"} · ca. ${estMinutes(s)} Min.` : ""}${p.listenCount ? ` · ${p.listenCount}× gehört` : ""}</span>
+          <span class="meta">${m.own ? "Eigene Geschichte · " : ""}${levelRest(m.level) ? `${escapeHtml(levelRest(m.level))} · ` : ""}${escapeHtml(m.genre)}${s ? ` · ${s.scenes.length} ${s.scenes.length === 1 ? "Szene" : "Szenen"} · ca. ${estMinutes(s)} Min.` : ""}${p.listenCount ? ` · ${p.listenCount}× gehört` : ""}</span>
           ${cov ? `<span class="coverage ${covCls}" title="Anteil der Wörter im Text, die du kennst oder in der Lernkartei hast (ohne Partikel und Namen)">
             <span class="coverage-bar"><span style="width:${cov.pct}%"></span></span>
             Du kennst ${cov.pct} % der Wörter${cov.unknownWords ? ` · ${cov.unknownWords} neue` : ""}</span>` : `<span class="meta">wird geladen …</span>`}
@@ -497,6 +497,7 @@ RENDER.profile = () => {
         <button class="secondary" data-kana="quiz">ア Kana-Quiz</button>
       </div>
     </div>
+    ${ownStoriesPanel()}
     <div class="panel" id="sync-panel">${syncPanel()}</div>
     <div class="panel">
       <h3>Daten</h3>
@@ -554,7 +555,40 @@ function syncPanel() {
         <button class="secondary danger" data-act="sync-off">Trennen</button>
       </div>`}`;
 }
+// Eigene Geschichten: nach jedem erfolgreichen Abgleich nachsehen (höchstens einmal pro Minute)
+OwnStories.onChange(() => {
+  if (["library", "today", "profile"].includes(currentView)) showView(currentView);
+});
+function ownStoriesPanel() {
+  const list = OwnStories.list;
+  if (!list.length) return "";
+  return `
+    <div class="panel">
+      <h3>Eigene Geschichten</h3>
+      <p class="hint">Mit der Werkstatt erstellt, privat in ${escapeHtml(Sync.config ? Sync.config.repo : "deinem Daten-Repo")} gespeichert.</p>
+      <ul class="own-list">${list.map(m => `
+        <li>${levelBadge(m.level)} <span class="jp">${escapeHtml(m.titleJp)}</span> <small>${escapeHtml(m.titleDe)}</small>
+          <button class="icon-btn" data-del-story="${escapeHtml(m.id)}" title="Geschichte löschen">×</button></li>`).join("")}</ul>
+    </div>`;
+}
+async function deleteOwnStory(id) {
+  const m = Content.meta(id);
+  // Wörter in Lernkartei oder Merkliste brauchen ihre Geschichte (Bedeutung, Beispielsatz)
+  const refs = [...Store.db.cards, ...Store.db.saved].filter(x => Content.storyIdOf(x.sentenceId) === id).length;
+  if (refs) { toast(`Geht nicht: ${refs} ${refs === 1 ? "Wort" : "Wörter"} in Lernkartei/Merkliste ${refs === 1 ? "stammt" : "stammen"} aus dieser Geschichte.`); return; }
+  if (!Sync.config) { toast("Zum Löschen bitte zuerst den Abgleich über GitHub einrichten."); return; }
+  if (!confirm(`„${m.titleJp}“ auf allen Geräten löschen?`)) return;
+  try {
+    await OwnStories.remove(id);
+    delete Store.db.progress[id];
+    if (Store.db.currentStoryId === id) Store.db.currentStoryId = null;
+    Store.persist();
+    toast("Geschichte gelöscht");
+  } catch (err) { toast(`Löschen fehlgeschlagen: ${err.message}`); }
+}
+
 Sync.onUpdate((st, what) => {
+  if (st.status === "ok") OwnStories.refresh().catch(err => console.warn(err));
   if (what === "imported") {
     toast("Lernstand von GitHub übernommen");
     // Laufende Geschichte oder Abfrage nicht unterbrechen
@@ -576,6 +610,8 @@ $("#profile").addEventListener("click", e => {
     t.classList.toggle("on", i < 0);
     return;
   }
+  const del = e.target.closest("[data-del-story]");
+  if (del) { deleteOwnStory(del.dataset.delStory); return; }
   const k = e.target.closest("[data-kana]");
   if (k) { showView("kana"); KanaPractice.mode(k.dataset.kana); return; }
   const act = e.target.closest("[data-act]");

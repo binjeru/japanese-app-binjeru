@@ -39,6 +39,8 @@
     .badge.old { background: var(--bg); color: var(--muted); } .badge.new { background: var(--good-soft); color: var(--good); }
     .export-out { min-height: 260px; font-family: ui-monospace, Consolas, monospace; font-size: .8rem; white-space: pre; }
     .loading { color: var(--saved); }
+    .check-line { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; }
+    .check-line input { width: 18px; height: 18px; accent-color: var(--accent); }
     @media (max-width: 900px) { .ws-layout { grid-template-columns: 1fr; } .insp { position: static; } }
   </style>
 </head>
@@ -53,6 +55,35 @@
 
     <div class="ws-layout">
       <div class="ws-col">
+        <div class="panel">
+          <h2>0 · Geschichte mit Claude schreiben (optional)</h2>
+          <p class="hint">Stellt einen Auftrag für Claude zusammen – passend zu deinem Niveau und mit den Wörtern, die du schon kennst.
+            Claudes Antwort hier einfügen: Titel, Text und Übersetzungen werden übernommen und gleich zerlegt.</p>
+          <div class="meta-grid">
+            <label class="wide">Wunsch / Thema<input class="text-input" id="c-topic" placeholder="z. B. Ein Fuchs, der zum ersten Mal Schnee sieht"></label>
+            <label>Niveau<select class="text-input" id="c-level">
+              <option value="N5">N5 – Anfänger</option><option value="N4">N4 – Grundstufe</option><option value="N3">N3 – Mittelstufe</option>
+            </select></label>
+            <label>Länge<select class="text-input" id="c-length">
+              <option value="15">kurz (ca. 15 Sätze)</option><option value="30" selected>mittel (ca. 30 Sätze)</option><option value="50">lang (ca. 50 Sätze)</option>
+            </select></label>
+            <label>Neue Wörter<select class="text-input" id="c-new">
+              <option value="5">wenige (ca. 5)</option><option value="10" selected>einige (ca. 10)</option><option value="20">viele (ca. 20)</option>
+            </select></label>
+          </div>
+          <label class="hint check-line"><input type="checkbox" id="c-known" checked> <span id="c-known-label">Bekannte Wörter aus meinem Lernstand mitschicken</span></label>
+          <div class="row wrap">
+            <button class="primary" id="c-open">In Claude öffnen</button>
+            <button class="secondary" id="c-copy">Auftrag kopieren</button>
+          </div>
+          <label class="hint" for="c-answer" style="display:block;margin-top:14px">Antwort von Claude (den Codeblock kopieren und hier einfügen):</label>
+          <textarea class="text-input source" id="c-answer" style="min-height:120px" placeholder="@id: …&#10;@titleJp: …&#10;# …&#10;むかしむかし…。&#10;= Es war einmal …"></textarea>
+          <div class="row wrap">
+            <button class="primary" id="c-import" disabled>Übernehmen und zerlegen</button>
+            <button class="secondary" id="c-paste">Aus Zwischenablage einfügen</button>
+          </div>
+        </div>
+
         <div class="panel">
           <h2>1 · Text</h2>
           <div class="meta-grid">
@@ -81,9 +112,14 @@
         </div>
 
         <div class="panel hidden" id="w-export">
-          <h2>3 · Export</h2>
-          <p class="hint">Erzeugt die Datei für <code>data/stories/</code> und den Eintrag für den Katalog. Danach: Datei speichern, Katalogeintrag in <code>data/stories/index.js</code> einfügen, Datei in <code>tests.html</code> einbinden, Tests laufen lassen – oder beides Claude geben.</p>
-          <div class="row"><button class="primary" id="w-build">Dateien erzeugen</button></div>
+          <h2>3 · In die App übernehmen</h2>
+          <p class="hint">Speichert die Geschichte in deinem privaten Daten-Repo. Sie erscheint dann auf allen Geräten mit eingerichtetem Abgleich in der Bibliothek – ohne weiteren Schritt.</p>
+          <div class="row wrap"><button class="primary" id="w-publish">In die App übernehmen</button></div>
+          <p class="hint" id="w-publish-note"></p>
+          <details class="export-more">
+            <summary class="hint">Alternativ: als Datei für das App-Repo exportieren (mitgelieferte Geschichte)</summary>
+            <p class="hint">Erzeugt die Datei für <code>data/stories/</code> und den Eintrag für den Katalog. Danach: Datei speichern, Katalogeintrag in <code>data/stories/index.js</code> einfügen, Datei in <code>tests.html</code> einbinden, Tests laufen lassen – oder beides Claude geben.</p>
+            <div class="row"><button class="secondary" id="w-build">Dateien erzeugen</button></div>
           <div id="w-out" class="hidden">
             <h3 id="w-file-name">Geschichte</h3>
             <textarea class="text-input export-out" id="w-file" readonly></textarea>
@@ -92,6 +128,7 @@
             <textarea class="text-input export-out" id="w-catalog" readonly style="min-height:150px"></textarea>
             <div class="row"><button class="secondary" data-copy="w-catalog">Kopieren</button></div>
           </div>
+          </details>
         </div>
       </div>
 
@@ -105,6 +142,9 @@
   <script src="data/stories/index.js"></script>
   <script src="js/util.js"></script>
   <script src="js/content.js"></script>
+  <!-- Abgleich und eigene Geschichten (privates Daten-Repo), für „In die App übernehmen“ -->
+  <script src="js/sync.js"></script>
+  <script src="js/own-stories.js"></script>
   <!-- Wortzerlegung (nur für die Werkstatt, nicht für die App): kuromoji.js, Apache-2.0, Wörterbuch IPAdic -->
   <script src="https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js"></script>
   <!-- Deutsche Bedeutungen als Vorschläge: JMdict (EDRDG, CC BY-SA 4.0), erzeugt mit tools/build-jmdict-de.ps1 -->

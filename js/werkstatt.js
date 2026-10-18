@@ -56,12 +56,15 @@ const Werkstatt = (() => {
   }
 
   // ---------- Text in Szenen und Sätze teilen ----------
+  // Satzende nur außerhalb von wörtlicher Rede: 「これは何？」と言いました。 bleibt ein Satz
   function splitSentences(line) {
     const out = [];
-    let buf = "";
+    let buf = "", depth = 0;
     for (let i = 0; i < line.length; i++) {
       buf += line[i];
-      if ("。！？!?".includes(line[i])) {
+      if ("「『（(".includes(line[i])) depth++;
+      else if ("」』）)".includes(line[i])) depth = Math.max(0, depth - 1);
+      if (!depth && "。！？!?".includes(line[i])) {
         while (i + 1 < line.length && "」』）)".includes(line[i + 1])) buf += line[++i];
         out.push(buf);
         buf = "";
@@ -70,7 +73,8 @@ const Werkstatt = (() => {
     if (buf.trim()) out.push(buf);
     return out;
   }
-  function splitText(text) {
+  // byLine: jede Zeile ist genau ein Satz (Claude-Import, damit die Übersetzungen passen)
+  function splitText(text, byLine = false) {
     const clean = text.replace(/《[^》]*》/g, "").replace(/[｜]/g, "").replace(/\r/g, "");
     const scenes = [];
     let cur = null;
@@ -79,7 +83,7 @@ const Werkstatt = (() => {
       if (line.startsWith("#")) { cur = { title: line.replace(/^#+\s*/, ""), sentences: [] }; scenes.push(cur); continue; }
       if (!line) continue;
       if (!cur) { cur = { title: "Szene 1", sentences: [] }; scenes.push(cur); }
-      cur.sentences.push(...splitSentences(line));
+      cur.sentences.push(...(byLine ? [line] : splitSentences(line)));
     }
     return scenes.filter(s => s.sentences.length);
   }
@@ -190,20 +194,31 @@ const Werkstatt = (() => {
     draft.dict[key] = e;
   }
 
-  function analyze() {
+  // translations: optional, deutsche Übersetzungen in der Reihenfolge aller Sätze (aus dem Claude-Import)
+  // gloss: optional, Claudes Wortliste { Wort: { r, de, pos } } – wird vor der Zerlegung als Wörterbuch
+  // vorgemerkt: Bedeutungen passen zum Zusammenhang, und mehrteilige Ausdrücke (ある朝) bleiben zusammen
+  function analyze(translations = null, gloss = null) {
     const text = $id("w-text").value;
-    const scenes = splitText(text);
-    if (!scenes.length) { toast("Bitte zuerst einen Text einfügen."); return; }
-    if (draft && draft.scenes.length && !confirm("Den bisherigen Entwurf (Übersetzungen, Änderungen) durch eine neue Zerlegung ersetzen?")) return;
+    const scenes = splitText(text, !!translations);
+    if (!scenes.length) { toast("Bitte zuerst einen Text einfügen."); return false; }
+    if (draft && draft.scenes.length && !confirm("Den bisherigen Entwurf (Übersetzungen, Änderungen) durch eine neue Zerlegung ersetzen?")) return false;
+    let n = 0;
     collectRuby(text);
     draft = { meta: readMeta(), text, scenes: [], dict: {} };
+    // Vorhandene App-Einträge haben Vorrang (auch über die Kanji-Schreibweise, z. B. 猫 → ねこ)
+    for (const [w, g] of Object.entries(gloss || {})) {
+      if (DICT[w] || kIndex[w] || isPunct(w)) continue;
+      const e = { de: g.de, pos: g.pos };
+      if (isKanji(w) && g.r && g.r !== w) e.r = g.r;
+      draft.dict[w] = e;
+    }
     for (const sc of scenes) {
       draft.scenes.push({
         title: sc.title,
         sentences: sc.sentences.map(t => {
           const segs = segment(t);
           for (const sg of segs) if (!sg.punct) ensureEntry(sg.s, sg);
-          return { segs: segs.map(sg => sg.s), de: "" };
+          return { segs: segs.map(sg => sg.s), de: (translations && translations[n++]) || "" };
         }),
       });
     }
@@ -211,6 +226,7 @@ const Werkstatt = (() => {
     save();
     render();
     toast(`${draft.scenes.reduce((n, s) => n + s.sentences.length, 0)} Sätze zerlegt`);
+    return true;
   }
 
   // ---------- Bearbeiten ----------
@@ -419,10 +435,60 @@ const Werkstatt = (() => {
     const parts = order.filter(f => e[f] !== undefined && e[f] !== "" && !(f === "de" && e.base && !e.de)).map(f => `${f}: ${js(e[f])}`);
     return `{ ${parts.join(", ")} }`;
   }
-  function build() {
+  function checkMeta() {
     draft.meta = readMeta();
     const m = draft.meta;
-    if (!/^[a-z0-9-]+$/.test(m.id)) { toast("Bitte eine ID aus Kleinbuchstaben/Ziffern eintragen."); $id("m-id").focus(); return; }
+    if (!/^[a-z0-9-]+$/.test(m.id)) { toast("Bitte eine ID aus Kleinbuchstaben/Ziffern eintragen."); $id("m-id").focus(); return null; }
+    if (!m.titleJp) { toast("Bitte einen japanischen Titel eintragen."); $id("m-titleJp").focus(); return null; }
+    return m;
+  }
+  // Geschichte als Daten (für das Daten-Repo): Katalogeintrag + Inhalt im selben Format wie die Dateien
+  function storyData() {
+    prune();
+    const m = draft.meta;
+    const dict = {};
+    for (const k of Object.keys(draft.dict).sort()) {
+      const e = draft.dict[k], out = {};
+      for (const f of ["r", "ro", "de", "k", "base", "pos", "note", "say"]) {
+        if (e[f] !== undefined && e[f] !== "" && !(f === "de" && e.base && !e.de)) out[f] = e[f];
+      }
+      dict[k] = out;
+    }
+    return {
+      catalog: {
+        id: m.id, titleJp: m.titleJp, titleDe: m.titleDe, description: m.description,
+        level: m.level, genre: m.genre, icon: m.icon || "話", source: m.source,
+      },
+      story: {
+        id: m.id, audioUri: null,
+        scenes: draft.scenes.map(sc => ({ title: sc.title, sentences: sc.sentences.map(s => ({ jp: s.segs.join("|"), de: s.de.trim() })) })),
+        dict,
+      },
+    };
+  }
+  async function publish() {
+    const m = checkMeta();
+    if (!m) return;
+    const builtIn = Content.meta(m.id) && !Content.meta(m.id).own;
+    if (builtIn) { toast(`Die ID „${m.id}“ gehört zu einer mitgelieferten Geschichte – bitte eine andere wählen.`); $id("m-id").focus(); return; }
+    const st = stats();
+    if ((st.missing || st.noDe) && !confirm(`Es fehlen noch ${st.missing} Bedeutungen und ${st.noDe} Übersetzungen. Trotzdem übernehmen?`)) return;
+    if (OwnStories.has(m.id) && !confirm(`Deine Geschichte „${m.id}“ gibt es schon. Ersetzen?`)) return;
+    const btn = $id("w-publish");
+    btn.disabled = true;
+    try {
+      const res = await OwnStories.publish(storyData());
+      save();
+      toast(res.replaced ? "Geschichte ersetzt – erscheint auf allen Geräten in der Bibliothek" : "Geschichte übernommen – erscheint auf allen Geräten in der Bibliothek");
+      $id("w-publish-note").innerHTML = `✓ „${escapeHtml(m.titleJp)}“ liegt in deinem Daten-Repo. <a href="index.html">Zur App</a>`;
+    } catch (err) {
+      toast(`Übernehmen fehlgeschlagen: ${err.message}`);
+    } finally { btn.disabled = false; }
+  }
+
+  function build() {
+    const m = checkMeta();
+    if (!m) return;
     if (Content.meta(m.id)) toast(`Hinweis: Die ID „${m.id}“ gibt es schon – die bestehende Geschichte würde ersetzt.`);
     prune();
     const st = stats();
@@ -458,6 +524,120 @@ ${dict}
     if (st.missing || st.noDe) toast(`Erzeugt – es fehlen noch ${st.missing} Bedeutungen und ${st.noDe} Übersetzungen.`);
   }
 
+  // ---------- Geschichte mit Claude ----------
+  // Bekannte und gerade gelernte Wörter aus dem Lernstand der App (gleicher Browser)
+  function knownWords() {
+    let db;
+    try { db = JSON.parse(localStorage.getItem("monogatari-v1")); } catch { db = null; }
+    if (!db) return [];
+    const words = new Set(Object.keys(db.userVocab || {}).filter(k => db.userVocab[k].known));
+    for (const c of db.cards || []) words.add(c.vocabId);
+    return [...words].filter(k => DICT[k]);   // in der Schreibweise, in der sie in den Geschichten vorkommen
+  }
+  const LEVELS = {
+    N5: "Anfänger (JLPT N5): kurze Sätze, Höflichkeitsform です/ます, Grundgrammatik (は/が/を/に/で/と/も, い- und な-Adjektive, ～たい, ～ています, ～ました), Grundwortschatz. Kanji nur für sehr häufige Wörter, sonst Hiragana",
+    N4: "Grundstufe (JLPT N4): einfache Erzählsprache, て-Form-Verbindungen, ～たら, ～と思う, ～から/ので, Potentialform, einfache Nebensätze. Übliche Kanji des Grundwortschatzes",
+    N3: "Mittelstufe (JLPT N3): natürliche Erzählsprache in der einfachen Form (だ/である), auch längere Sätze und Lautmalerei. Kanji wie in Büchern für Jugendliche üblich",
+  };
+  function buildPrompt() {
+    const topic = $id("c-topic").value.trim();
+    const level = $id("c-level").value;
+    const len = Number($id("c-length").value);
+    const fresh = $id("c-new").value;
+    const known = $id("c-known").checked ? knownWords() : [];
+    const scenes = Math.max(2, Math.round(len / 10));
+    return `Schreibe mir eine japanische Geschichte zum Japanischlernen. Ich lerne mit einer App, die Geschichten satzweise vorliest und Wörter erklärt.
+
+Thema / Wunsch: ${topic || "frei – überrasche mich mit einer warmherzigen, alltagsnahen oder märchenhaften Geschichte"}
+Niveau: ${LEVELS[level]}.
+Länge: etwa ${len} Sätze in ${scenes} Szenen.
+${known.length ? `
+Diese Wörter kenne ich schon – baue sie gern ein, damit ich viel verstehe:
+${known.join("、")}
+` : ""}
+Führe höchstens etwa ${fresh} neue Wörter ein und verwende neue Wörter mehrmals, damit sie hängen bleiben. Die Geschichte soll eine kleine Handlung mit Anfang, Wendung und Schluss haben und natürlich klingen – kein Lehrbuchdeutsch ins Japanische übersetzt. Keine Romaji.
+
+Antworte ausschließlich mit einem einzigen Codeblock in genau diesem Format (die App liest es automatisch ein):
+
+\`\`\`
+@id: kurzer-name-in-kleinbuchstaben
+@titleJp: japanischer Titel
+@titleDe: deutscher Titel
+@level: ${level}
+@genre: ein Wort, z. B. Märchen, Alltag, Natur, Humor
+@icon: ein passendes Kanji für die Kachel
+@description: worum es geht, 1–2 Sätze auf Deutsch
+# japanischer Szenentitel – deutscher Szenentitel
+最初の文。
+= Deutsche Übersetzung des ersten Satzes.
+次の文です。
+= Deutsche Übersetzung des zweiten Satzes.
+# nächste Szene – …
+…
+~ 文 | ぶん | Satz | Nomen
+~ 見る | みる | sehen, anschauen | Verb
+\`\`\`
+
+Regeln für das Format:
+- Jeder japanische Satz steht allein auf einer Zeile und endet mit 。, ！ oder ？ (wörtliche Rede in 「」 gehört mit auf die Zeile).
+- Direkt darunter folgt eine Zeile mit „= “ und der deutschen Übersetzung – natürlich, aber nah am Japanischen.
+- Szenen beginnen mit einer Zeile „# “.
+- Bei Namen und Kanji mit ungewöhnlicher Lesung die Lesung im Aozora-Format angeben: 漢字《かんじ》.
+- Am Ende im selben Codeblock die Wortliste: jedes Inhaltswort der Geschichte genau einmal (Nomen, Verben, Adjektive, Adverbien, feste Ausdrücke, Namen – keine Partikel, kein です/だ/ます). Verben und Adjektive in der Wörterbuchform, so geschrieben wie in der Geschichte (gleiche Kanji bzw. Kana). Format: „~ Wort | Lesung in Hiragana | deutsche Bedeutung, wie sie in dieser Geschichte gemeint ist | Wortart“.
+- Wortart genau eine von: ${POS_CHOICES.filter(p => !["Partikel", "Satzendpartikel", "Kopula", "Hilfsverb", "Suffix"].includes(p)).join(", ")}.`;
+  }
+
+  // Liest Claudes Antwort: Metadaten (@feld: wert), Szenen (#), japanische Sätze, Übersetzungen (= …)
+  // und die Wortliste (~ Wort | Lesung | Bedeutung | Wortart)
+  function parseClaude(raw) {
+    const meta = {}, lines = [], translations = [], gloss = {};
+    raw = raw.replace(/\r/g, "");
+    // Nur den Codeblock lesen, falls Claude noch etwas davor oder danach geschrieben hat
+    const block = raw.match(/```[^\n]*\n([\s\S]*?)(?:```|$)/);
+    if (block) raw = block[1];
+    for (const l of raw.split("\n")) {
+      const line = l.trim();
+      if (!line || line.startsWith("```")) continue;
+      let m;
+      if ((m = line.match(/^@(\w+)\s*[:：]\s*(.*)$/))) { if (META.includes(m[1])) meta[m[1]] = m[2].trim(); continue; }
+      if (line.startsWith("#")) { lines.push(line); continue; }
+      if ((m = line.match(/^[=＝]\s*(.*)$/))) {
+        // Übersetzung gehört zur vorherigen japanischen Zeile
+        if (translations.length) translations[translations.length - 1] = m[1].trim();
+        continue;
+      }
+      if ((m = line.match(/^[~～]\s*(.+)$/))) {
+        const [w, r, de, pos] = m[1].split(/\s*[|｜]\s*/).map(x => (x || "").trim());
+        if (w && de) gloss[w] = { r: kataToHira(r || ""), de, pos: POS_CHOICES.includes(pos) ? pos : "" };
+        continue;
+      }
+      if (!/[぀-ヿ㐀-鿿]/.test(line)) continue;   // Zeile ohne Japanisch (Begleittext)
+      lines.push(line);
+      translations.push("");
+    }
+    return { meta, text: lines.join("\n"), translations, gloss };
+  }
+
+  function importClaude() {
+    const raw = $id("c-answer").value;
+    const { meta, text, translations, gloss } = parseClaude(raw);
+    if (!splitText(text).length) { toast("In der Antwort wurde kein japanischer Text gefunden."); return; }
+    if (meta.id) meta.id = meta.id.toLowerCase().replace(/[^a-z0-9-]/g, "");
+    if (!meta.source) meta.source = "Eigene Geschichte, mit Claude erstellt";
+    $id("w-text").value = text;
+    for (const k of META) if (meta[k] !== undefined) $id(`m-${k}`).value = meta[k];
+    if (analyze(translations, gloss)) {
+      $id("c-answer").value = "";
+      $id("w-review").scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
+  function updateKnownLabel() {
+    const n = knownWords().length;
+    $id("c-known-label").textContent = n ? `Meine ${n} bekannten Wörter aus dem Lernstand mitschicken` : "Bekannte Wörter mitschicken (in diesem Browser noch keine)";
+    $id("c-known").disabled = !n;
+  }
+
   // ---------- Ereignisse ----------
   document.addEventListener("click", e => {
     const w = e.target.closest("[data-w]");
@@ -467,9 +647,22 @@ ${dict}
     const c = e.target.closest("[data-copy]");
     if (c) { const ta = $id(c.dataset.copy); ta.select(); navigator.clipboard ? navigator.clipboard.writeText(ta.value).then(() => toast("Kopiert")) : (document.execCommand("copy"), toast("Kopiert")); return; }
     const id = e.target.id;
-    if (id === "w-analyze") analyze();
+    if (id === "c-copy") { const p = buildPrompt(); navigator.clipboard ? navigator.clipboard.writeText(p).then(() => toast("Auftrag kopiert – jetzt in Claude einfügen")) : prompt("Auftrag kopieren:", p); }
+    else if (id === "c-open") {
+      const p = buildPrompt();
+      if (navigator.clipboard) navigator.clipboard.writeText(p).catch(() => {});
+      window.open(`https://claude.ai/new?q=${encodeURIComponent(p)}`, "_blank", "noopener");
+    }
+    else if (id === "c-paste") {
+      if (!navigator.clipboard || !navigator.clipboard.readText) { toast("Bitte die Antwort von Hand ins Feld einfügen."); return; }
+      navigator.clipboard.readText().then(t => { $id("c-answer").value = t; toast("Eingefügt"); })
+        .catch(() => toast("Kein Zugriff auf die Zwischenablage – bitte von Hand einfügen."));
+    }
+    else if (id === "c-import") importClaude();
+    else if (id === "w-analyze") analyze();
     else if (id === "w-reset") { if (confirm("Entwurf wirklich verwerfen?")) { draft = null; sel = null; try { localStorage.removeItem(SAVE_KEY); } catch { /* egal */ } render(); } }
     else if (id === "w-build") build();
+    else if (id === "w-publish") publish();
     else if (id === "w-download") {
       const blob = new Blob([$id("w-file").value], { type: "text/javascript" });
       const a = document.createElement("a");
@@ -514,6 +707,8 @@ ${dict}
         if (err) { status.innerHTML = `<span class="loading">Die Wortzerlegung konnte nicht geladen werden (Internetverbindung nötig): ${escapeHtml(String(err))}</span>`; return; }
         tokenizer = t;
         $id("w-analyze").disabled = false;
+        $id("c-import").disabled = false;
+        updateKnownLabel();
         status.textContent = `Bereit. Wörterbuch: ${Object.keys(DICT).length} Einträge aus ${Content.stories.length} Geschichten${typeof JMDICT_DE !== "undefined" ? " + deutsche Bedeutungen aus JMdict" : ""}.`;
         render();
       });
@@ -521,5 +716,5 @@ ${dict}
   }
   init();
 
-  return { get draft() { return draft; }, segment: t => segment(t), analyze };
+  return { get draft() { return draft; }, segment: t => segment(t), analyze, buildPrompt, parseClaude };
 })();

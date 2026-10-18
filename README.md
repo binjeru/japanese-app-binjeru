@@ -42,6 +42,7 @@ js/content.js    bereitet Geschichten auf: Satz-IDs, Wortvorkommen, Häufigkeite
 js/scheduler.js  Wiederholungsplanung – reine Funktionen, getestet in js/scheduler.test.js
 js/store.js      Datenschicht (localStorage): Merkliste, Karten, Wiederholungshistorie, Fortschritt
 js/sync.js       Abgleich des Lernstands über ein privates GitHub-Repo (Contents-API)
+js/own-stories.js eigene Geschichten aus dem Daten-Repo: Kopie im Browser, Abgleich, Übernehmen, Löschen
 js/speech.js     Sprachausgabe (Platzhalter bis echte Aufnahmen vorliegen)
 js/strokes.js    lädt und animiert Strichfolgen (KanjiVG)
 js/heisig.js     Heisig-Kartei: Reihenfolge, Freischalten, Wiederholung (ohne UI)
@@ -73,10 +74,12 @@ js/app.js        Navigation und übrige Ansichten
 
 `werkstatt.html` (Link auch im Profil) macht aus einem japanischen Text eine fertige Geschichtsdatei:
 
+0. *Optional* **Geschichte mit Claude schreiben:** Wunsch, Niveau (N5–N3), Länge und Anzahl neuer Wörter wählen → **In Claude öffnen** (oder Auftrag kopieren). Der Auftrag enthält die bekannten und gerade gelernten Wörter aus dem Lernstand dieses Browsers. Claude antwortet mit einem Codeblock (`@feld: wert` für die Angaben, `#` für Szenen, je Zeile ein japanischer Satz, darunter `= Übersetzung`, am Ende eine Wortliste `~ Wort | Lesung | Bedeutung | Wortart` mit den Bedeutungen im Zusammenhang). Den Codeblock in das Antwortfeld einfügen → **Übernehmen und zerlegen** füllt Angaben, Text und Übersetzungen aus und zerlegt den Text; Bedeutungen aus Claudes Wortliste haben Vorrang vor JMdict, mehrteilige Ausdrücke (ある朝) bleiben zusammen.
 1. Angaben zur Geschichte eintragen und den Text einfügen. Eine Zeile mit `#` am Anfang startet eine neue Szene; Ruby im Aozora-Format (`漢字《かんじ》`) wird als Lesung übernommen und dann entfernt.
 2. **Text zerlegen:** Die Wortzerlegung übernimmt [kuromoji.js](https://github.com/takuyaa/kuromoji.js) (Apache-2.0, wird vom CDN geladen – Internetverbindung nötig). Verbformen werden zu lernfreundlichen Einheiten zusammengefasst (行き+まし+た → 行きました mit Grundform 行く); Ausdrücke, die schon im Wörterbuch stehen, werden wiederverwendet; für neue Wörter schlägt die Werkstatt deutsche Bedeutungen aus JMdict vor (bitte prüfen – JMdict deckt nicht alle Wörter ab und ist manchmal knapp).
 3. **Prüfen:** Wort anklicken → Lesung, Grundform, Bedeutung, Wortart, Hinweis bearbeiten; Wörter verbinden/teilen, Sätze teilen/verbinden; zu jedem Satz die deutsche Übersetzung eintragen. Rot markiert, was noch fehlt. Der Entwurf wird im Browser gespeichert.
-4. **Exportieren:** erzeugt `data/stories/<id>.js` und den Katalogeintrag für `data/stories/index.js`. Datei einbinden wie unten beschrieben.
+4. **In die App übernehmen:** speichert die Geschichte als `geschichten/<id>.json` im privaten Daten-Repo (gleiches Token wie der Abgleich). Die App holt eigene Geschichten nach jedem Abgleich, hält eine Kopie im Browser (offline nutzbar) und zeigt sie in der Bibliothek als „Eigene Geschichte“. Löschen im Profil unter „Eigene Geschichten“ – nur solange keine Wörter daraus in Lernkartei oder Merkliste liegen.
+   *Alternativ* als mitgelieferte Geschichte exportieren: erzeugt `data/stories/<id>.js` und den Katalogeintrag für `data/stories/index.js`. Datei einbinden wie unten beschrieben.
 
 Am besten über den lokalen Server öffnen: `powershell -ExecutionPolicy Bypass -File tools/serve.ps1`, dann http://localhost:8123/werkstatt.html.
 

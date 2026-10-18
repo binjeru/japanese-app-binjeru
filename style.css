@@ -94,6 +94,12 @@ button.link { border: 0; background: none; color: var(--muted); text-decoration:
 .tag { display: inline-block; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: var(--bg); border-radius: 6px; padding: 2px 8px; margin-right: 6px; }
 .tag.good { color: var(--good); background: var(--good-soft); }
 .kicker { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 600; }
+.level-badge { display: inline-block; vertical-align: middle; font-size: .68rem; font-weight: 700; letter-spacing: .04em; line-height: 1; padding: 4px 7px; border-radius: 6px; background: var(--l0); color: var(--muted); font-family: inherit; }
+.level-badge.lv-n5 { background: var(--good-soft); color: var(--good); }
+.level-badge.lv-n4 { background: #e3eefb; color: #2f6db5; }
+.level-badge.lv-n3 { background: #fdf0dc; color: #b06d12; }
+.level-badge.lv-n2, .level-badge.lv-n1 { background: var(--accent-soft); color: var(--accent); }
+@media (prefers-color-scheme: dark) { .level-badge.lv-n4 { background: #223a55; color: #8ab8ee; } .level-badge.lv-n3 { background: #4a3a1c; color: #e8b864; } }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; font-size: .9rem; }
 .chip small { color: var(--muted); }
@@ -332,6 +338,9 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 textarea.text-input { resize: vertical; }
 .num-input { width: 110px; }
 .sync-error { color: var(--accent) !important; }
+.own-list { list-style: none; padding: 0; margin: 0; }
+.own-list li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+.own-list li small { color: var(--muted); flex: 1; min-width: 0; }
 .ws-kanji { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; font-size: .85rem; color: var(--muted); }
 .ws-kanji span { background: var(--bg); border-radius: 8px; padding: 3px 9px; }
 .ws-kanji span.learned { color: var(--good); background: var(--good-soft); }

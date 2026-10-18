@@ -39,7 +39,7 @@ const Player = (() => {
         <button class="secondary" data-act="back">← Bibliothek</button>
         <span class="audio-badge" title="Für diese Geschichte gibt es noch keine Audioaufnahme.">🔈 Sprachausgabe · Platzhalter</span>
       </div>
-      <h2 class="pl-title"><span class="jp">${s.titleJp}</span> <small>${escapeHtml(s.titleDe)}</small></h2>
+      <h2 class="pl-title">${levelBadge(s.level)} <span class="jp">${s.titleJp}</span> <small>${escapeHtml(s.titleDe)}</small></h2>
       <div class="scene-tabs" id="pl-scenes">${s.scenes.map((sc, i) =>
         `<button data-scene="${i}"><b>${i + 1}</b> ${escapeHtml(sc.title.split(" – ")[0])}</button>`).join("")}</div>
       <p class="hint voice-hint hidden" id="pl-voice"></p>

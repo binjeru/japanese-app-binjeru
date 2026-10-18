@@ -72,10 +72,30 @@ const Content = (() => {
     return story;
   }
 
+  // Eigene Geschichten (aus dem privaten Daten-Repo, siehe own-stories.js): Katalogeintrag und Inhalt
+  // liegen schon vor. Eingebaute Geschichten mit derselben ID haben Vorrang.
+  const ownData = {};
+  function addOwn(m, story) {
+    const i = catalog.findIndex(x => x.id === m.id);
+    if (i >= 0 && !catalog[i].own) return false;
+    const entry = { ...m, sourceType: "own", own: true };
+    if (i >= 0) catalog[i] = entry; else catalog.push(entry);
+    ownData[m.id] = story;
+    if (storiesById[m.id]) register(story);   // schon geladen → aktualisieren
+    return true;
+  }
+  function removeOwn(id) {
+    const i = catalog.findIndex(x => x.id === id && x.own);
+    if (i >= 0) catalog.splice(i, 1);
+    delete ownData[id];
+    delete storiesById[id];
+  }
+
   // Geschichte nachladen (per <script>, funktioniert auch ohne Server)
   function load(id) {
     if (storiesById[id]) return Promise.resolve(storiesById[id]);
     if (!meta(id)) return Promise.reject(new Error(`Unbekannte Geschichte: ${id}`));
+    if (ownData[id]) return Promise.resolve(register(ownData[id]));
     if (!loading[id]) {
       loading[id] = new Promise((resolve, reject) => {
         waiting[id] = resolve;
@@ -146,7 +166,7 @@ const Content = (() => {
   }
 
   return {
-    catalog, meta, register, load, ensure, loadAll, storyIdOf,
+    catalog, meta, register, load, ensure, loadAll, storyIdOf, addOwn, removeOwn,
     get stories() { return catalog.map(m => storiesById[m.id]).filter(Boolean); },
     story: id => storiesById[id] || null, sentence: id => sentences[id] || null,
     vocab, vocabIdOf, display, reading, isLearnable, sayText, globalFreq, rank, byRank,

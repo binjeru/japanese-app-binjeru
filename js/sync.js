@@ -72,32 +72,53 @@ const Sync = (() => {
     return res.json();
   }
 
-  // Liest lernstand.json → { data, text, sha } oder null, wenn es die Datei noch nicht gibt
-  async function fetchRemote() {
-    const file = await api(`/repos/${cfg.repo}/contents/${FILE}`);
+  // ---------- Dateien im Daten-Repo (auch für eigene Geschichten, siehe own-stories.js) ----------
+  function need() { if (!cfg) throw new Error("Der Abgleich über GitHub ist nicht eingerichtet (Profil der App)"); }
+  async function getFile(path) {
+    need();
+    const file = await api(`/repos/${cfg.repo}/contents/${path}`);
     if (!file) return null;
     // Dateien über 1 MB liefert die Contents-API ohne Inhalt; dann über die Blob-API holen
     const b64 = file.content || (await api(`/repos/${cfg.repo}/git/blobs/${file.sha}`)).content;
-    const text = decode(b64);
-    return { data: JSON.parse(text), text, sha: file.sha };
+    return { text: decode(b64), sha: file.sha };
+  }
+  async function putFile(path, text, message, sha = null) {
+    need();
+    const body = { message, content: encode(text) };
+    if (sha) body.sha = sha;
+    const res = await api(`/repos/${cfg.repo}/contents/${path}`, { method: "PUT", body: JSON.stringify(body) });
+    return res.content.sha;
+  }
+  async function deleteFile(path, sha, message) {
+    need();
+    await api(`/repos/${cfg.repo}/contents/${path}`, { method: "DELETE", body: JSON.stringify({ message, sha }) });
+  }
+  async function listDir(path) {
+    need();
+    const res = await api(`/repos/${cfg.repo}/contents/${path}`);
+    return Array.isArray(res) ? res : [];
+  }
+
+  // Liest lernstand.json → { data, text, sha } oder null, wenn es die Datei noch nicht gibt
+  async function fetchRemote() {
+    const file = await getFile(FILE);
+    return file && { data: JSON.parse(file.text), text: file.text, sha: file.sha };
   }
 
   async function upload(sha) {
     const db = Store.db;
-    const body = {
-      message: `Lernstand ${new Date(db.updatedAt || Date.now()).toLocaleString("de-CH")}`,
-      content: encode(Store.exportJson(true)),
-    };
-    if (sha) body.sha = sha;
     const rev = cfg.rev;
-    const res = await api(`/repos/${cfg.repo}/contents/${FILE}`, { method: "PUT", body: JSON.stringify(body) });
-    cfg.sha = res.content.sha;
+    cfg.sha = await putFile(FILE, Store.exportJson(true), `Lernstand ${new Date(db.updatedAt || Date.now()).toLocaleString("de-CH")}`, sha);
     cfg.syncedRev = rev;
     cfg.lastSync = Date.now();
     save();
   }
 
-  function adopt(remote) {
+  // Vor dem Übernehmen eines fremden Lernstands laufen diese Schritte (z. B. eigene Geschichten
+  // holen, damit Karten aus neuen Geschichten ihre Wörter finden)
+  const beforeAdopt = [];
+  async function adopt(remote) {
+    for (const fn of beforeAdopt) { try { await fn(); } catch (err) { console.warn(err); } }
     Store.importJson(remote.text, true);
     cfg.sha = remote.sha;
     cfg.syncedRev = cfg.rev;
@@ -116,10 +137,10 @@ const Sync = (() => {
       const dirty = cfg.rev > cfg.syncedRev;
       const remoteChanged = remote && remote.sha !== cfg.sha;
       if (!remote) await upload(null);
-      else if (remoteChanged && !dirty) adopt(remote);
+      else if (remoteChanged && !dirty) await adopt(remote);
       else if (remoteChanged && dirty) {
         // Erster Abgleich auf einem Gerät ohne eigenen Lernstand: einfach übernehmen
-        if (!cfg.sha && isEmpty(Store.db)) adopt(remote);
+        if (!cfg.sha && isEmpty(Store.db)) await adopt(remote);
         else { state.conflict = { remote, local: Store.db.updatedAt }; set("conflict"); return; }
       } else if (dirty) await upload(remote.sha);
       set("ok");
@@ -162,7 +183,7 @@ const Sync = (() => {
     state.conflict = null;
     set("busy");
     try {
-      if (choice === "remote") adopt(c.remote);
+      if (choice === "remote") await adopt(c.remote);
       else await upload((await fetchRemote())?.sha);
       set("ok");
     } catch (err) { set("error", err.message); }
@@ -205,6 +226,8 @@ const Sync = (() => {
   return {
     start, now, schedule, connect, disconnect, resolve,
     onUpdate: fn => listeners.push(fn),
+    beforeAdopt: fn => beforeAdopt.push(fn),
+    files: { get: getFile, put: putFile, del: deleteFile, list: listDir },
     get state() { return state; },
     get config() { return cfg && { repo: cfg.repo, lastSync: cfg.lastSync }; },
   };

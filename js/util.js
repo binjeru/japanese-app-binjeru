@@ -98,6 +98,15 @@ function toast(msg) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
 }
 
+// Niveau-Label einer Geschichte: erster Teil der Angabe („N3 · Originaltext“ → N3), farbig nach Stufe
+function levelBadge(level) {
+  const main = String(level || "").split(" · ")[0].trim();
+  if (!main) return "";
+  const cls = /^N[1-5]$/i.test(main) ? main.toLowerCase() : "intro";
+  return `<span class="level-badge lv-${cls}" title="Niveau: ${escapeHtml(level)}">${escapeHtml(main)}</span>`;
+}
+const levelRest = level => String(level || "").split(" · ").slice(1).join(" · ");
+
 // Service Worker (sw.js): sorgt dafür, dass nach einem Update einfaches Neuladen genügt, und hält
 // die App offline verfügbar. Nur über http(s) möglich, nicht beim Öffnen als Datei.
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
