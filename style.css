@@ -331,6 +331,7 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .text-input:focus, .num-input:focus { outline: none; border-color: var(--accent); }
 textarea.text-input { resize: vertical; }
 .num-input { width: 110px; }
+.sync-error { color: var(--accent) !important; }
 .ws-kanji { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; font-size: .85rem; color: var(--muted); }
 .ws-kanji span { background: var(--bg); border-radius: 8px; padding: 3px 9px; }
 .ws-kanji span.learned { color: var(--good); background: var(--good-soft); }

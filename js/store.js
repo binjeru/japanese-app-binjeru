@@ -35,9 +35,14 @@ const Store = (() => {
     db.heisig.cards = db.heisig.cards.map(Scheduler.migrate);
   }
 
-  function persist() {
+  // Jede Änderung bekommt einen Zeitstempel; der Abgleich (sync.js) erkennt daran, wo zuletzt gelernt wurde.
+  const listeners = [];
+  function persist(touch = true) {
+    if (touch) db.updatedAt = Date.now();
     try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* z. B. privater Modus */ }
+    if (touch) listeners.forEach(fn => fn());
   }
+  function onChange(fn) { listeners.push(fn); }
 
   // Übernimmt Kana-Statistik und aus Geschichten gesammelte Wörter der alten Version
   function migrateFromOldApp() {
@@ -177,14 +182,15 @@ const Store = (() => {
   }
 
   // ---------- Sicherung ----------
-  function exportJson() { return JSON.stringify(db, null, 1); }
-  function importJson(text) {
+  function exportJson(compact = false) { return compact ? JSON.stringify(db) : JSON.stringify(db, null, 1); }
+  // keepTime: Stand aus dem Abgleich übernehmen, ohne ihn als neue lokale Änderung zu markieren
+  function importJson(text, keepTime = false) {
     const data = JSON.parse(text);
     if (!data || data.version !== 1 || !Array.isArray(data.cards)) throw new Error("Keine gültige Sicherung");
     db = Object.assign(fresh(), data);
     db.heisig = Object.assign(fresh().heisig, db.heisig);
     migrateCards();
-    persist();
+    persist(!keepTime);
   }
   function reset() {
     db = Object.assign(fresh(), { prefs: db.prefs });
@@ -194,7 +200,7 @@ const Store = (() => {
   if (isNew) migrateFromOldApp();
 
   return {
-    get db() { return db; }, persist, touchDay,
+    get db() { return db; }, persist, onChange, touchDay,
     status, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
     activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, activate, review, practice,
     progress, setPosition, startedListening, completed, streak,

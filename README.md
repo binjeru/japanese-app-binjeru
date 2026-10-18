@@ -17,7 +17,16 @@ Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge un
 - **Merkliste** – gesammelte Wörter mit Beispielsatz und Herkunft; nach Häufigkeitsrang sortiert; höchstens 12 Karten pro Tag in Fach 1 (Rückfälle zählen mit)
 - **Lernkartei** – 5 Fächer wie eine echte Lernkartei: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen*, *Vertiefen* (ohne Furigana), *Langzeit*. Jeden Tag zuerst die **Tagesabfrage** – erst danach sind Geschichten und neue Wörter freigeschaltet. Von jeder Karte zurück zur Stelle in der Geschichte
 - **Kanji** – eigenständige Heisig-Kartei („Die Kanji lernen und behalten 1“, 2200 Rahmen): Rahmen strikt in Heisigs Reihenfolge freischalten, eigenes Schlüsselwort und eigene Geschichte eintragen, Strichfolge als Animation; Abfrage vom Schlüsselwort zum Kanji (auf Papier schreiben, dann aufdecken). Neue Rahmen pro Tag einstellbar, bereits Gelerntes übernehmbar. In den Wortdetails der Geschichten steht nur zur Info, welche Rahmen die Kanji eines Wortes haben
-- **Profil** – bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Kana-Übung
+- **Profil** – bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Abgleich über GitHub, Kana-Übung
+
+**Abgleich zwischen Handy und Computer:** Der Lernstand kann automatisch über ein *privates* GitHub-Repo
+(hier `binjeru/binjeru-daten`, Datei `lernstand.json`) abgeglichen werden. Dafür auf
+[github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new) ein
+Fine-grained Token erstellen: *Only select repositories* → `binjeru-daten`, *Permissions* → *Contents: Read and write*.
+Token im Profil unter „Abgleich über GitHub“ eintragen – auf jedem Gerät einmal. Das Token bleibt nur im Browser
+des Geräts; öffentliche Repos lehnt die App ab, weil der Lernstand eigene Heisig-Schlüsselwörter und Geschichten enthält.
+Abgeglichen wird beim Öffnen der App, beim Zurückwechseln und einige Sekunden nach jeder Änderung. Wurde auf beiden
+Geräten seit dem letzten Abgleich gelernt, fragt die App im Profil, welcher Stand gelten soll.
 
 Tastatur: Player `Leertaste` Play/Pause, `←`/`→` Satz, `R` Satz wiederholen · Check/Lernkartei `Leertaste` aufdecken, `1` Noch nicht, `2` Gewusst · `Esc` schließt die Wortdetails.
 
@@ -29,6 +38,7 @@ js/util.js       Hilfsfunktionen (Furigana, Romaji, …)
 js/content.js    bereitet Geschichten auf: Satz-IDs, Wortvorkommen, Häufigkeiten
 js/scheduler.js  Wiederholungsplanung – reine Funktionen, getestet in js/scheduler.test.js
 js/store.js      Datenschicht (localStorage): Merkliste, Karten, Wiederholungshistorie, Fortschritt
+js/sync.js       Abgleich des Lernstands über ein privates GitHub-Repo (Contents-API)
 js/speech.js     Sprachausgabe (Platzhalter bis echte Aufnahmen vorliegen)
 js/strokes.js    lädt und animiert Strichfolgen (KanjiVG)
 js/heisig.js     Heisig-Kartei: Reihenfolge, Freischalten, Wiederholung (ohne UI)

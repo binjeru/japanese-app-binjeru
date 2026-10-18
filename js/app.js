@@ -497,6 +497,7 @@ RENDER.profile = () => {
         <button class="secondary" data-kana="quiz">ア Kana-Quiz</button>
       </div>
     </div>
+    <div class="panel" id="sync-panel">${syncPanel()}</div>
     <div class="panel">
       <h3>Daten</h3>
       <p class="hint">Dein Lernstand wird in diesem Browser gespeichert. Mit einer Sicherung kannst du ihn auf ein anderes Gerät übertragen.</p>
@@ -511,6 +512,60 @@ RENDER.profile = () => {
     <p class="hint on-page">Quellen: Häufigkeitsränge aus dem Leeds Internet Corpus (CC BY 2.5) ·
       Kanji-Daten aus KANJIDIC2, EDRDG (CC BY-SA 4.0) · Strichfolgen aus KanjiVG, Ulrich Apel (CC BY-SA 3.0)</p>`;
 };
+// Abgleich über ein privates GitHub-Repo (js/sync.js)
+function syncPanel() {
+  const cfg = Sync.config, st = Sync.state;
+  if (!cfg) return `
+    <h3>Abgleich über GitHub</h3>
+    <p class="hint">Hält den Lernstand auf Handy und Computer gleich. Du brauchst ein <b>privates</b> Repo
+      (z. B. binjeru/binjeru-daten) und ein
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained Token</a>
+      mit Zugriff nur auf dieses Repo und der Berechtigung „Contents: Read and write“.
+      Das Token bleibt nur in diesem Browser gespeichert.</p>
+    <div class="field"><label for="sync-repo">Repo</label>
+      <input class="text-input" id="sync-repo" value="binjeru/binjeru-daten" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label for="sync-token">Token</label>
+      <input class="text-input" id="sync-token" type="password" autocomplete="off" placeholder="github_pat_…"></div>
+    <div class="row wrap"><button class="primary" data-act="sync-connect">Verbinden</button></div>
+    ${st.status === "error" ? `<p class="hint sync-error">${escapeHtml(st.message)}</p>` : ""}`;
+  const when = cfg.lastSync ? new Date(cfg.lastSync).toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" }) : "noch nie";
+  const line = {
+    busy: "Gleiche ab …",
+    ok: `Abgeglichen · zuletzt ${when}`,
+    idle: `Zuletzt abgeglichen: ${when}`,
+    offline: st.message,
+    error: `Fehler: ${escapeHtml(st.message)}`,
+    conflict: "Konflikt",
+  }[st.status] || "";
+  const c = st.conflict;
+  const fmt = t => t ? new Date(t).toLocaleString("de-CH", { dateStyle: "short", timeStyle: "short" }) : "unbekannt";
+  return `
+    <h3>Abgleich über GitHub</h3>
+    <p class="hint ${st.status === "error" ? "sync-error" : ""}">${escapeHtml(cfg.repo)} · ${line}</p>
+    ${c ? `<p class="hint sync-error">Auf GitHub liegt ein anderer Stand (geändert ${fmt(c.remote.data.updatedAt)}),
+      und hier wurde seit dem letzten Abgleich ebenfalls gelernt (${fmt(c.local)}). Welcher Stand soll gelten?
+      Der andere wird überschrieben.</p>
+      <div class="row wrap">
+        <button class="primary" data-act="sync-remote">Stand von GitHub übernehmen</button>
+        <button class="secondary" data-act="sync-local">Diesen Stand hochladen</button>
+      </div>` : `
+      <div class="row wrap">
+        <button class="secondary" data-act="sync-now">Jetzt abgleichen</button>
+        <button class="secondary danger" data-act="sync-off">Trennen</button>
+      </div>`}`;
+}
+Sync.onUpdate((st, what) => {
+  if (what === "imported") {
+    toast("Lernstand von GitHub übernommen");
+    // Laufende Geschichte oder Abfrage nicht unterbrechen
+    if (!["player", "check", "kana"].includes(currentView)) showView(currentView);
+    return;
+  }
+  if (st.status === "conflict") toast("Abgleich: Konflikt – bitte im Profil entscheiden");
+  const panel = $("#sync-panel");
+  if (panel && currentView === "profile" && !panel.contains(document.activeElement)) panel.innerHTML = syncPanel();
+});
+
 $("#profile").addEventListener("click", e => {
   const t = e.target.closest("[data-topic]");
   if (t) {
@@ -525,7 +580,20 @@ $("#profile").addEventListener("click", e => {
   if (k) { showView("kana"); KanaPractice.mode(k.dataset.kana); return; }
   const act = e.target.closest("[data-act]");
   if (!act) return;
-  if (act.dataset.act === "export") {
+  if (act.dataset.act === "sync-connect") {
+    act.disabled = true;
+    Sync.connect($("#sync-repo").value, $("#sync-token").value)
+      .then(() => { toast("Mit GitHub verbunden"); RENDER.profile(); })
+      .catch(err => { toast(err.message); act.disabled = false; });
+  } else if (act.dataset.act === "sync-now") {
+    Sync.now();
+  } else if (act.dataset.act === "sync-off") {
+    if (!confirm("Abgleich trennen? Das Token wird aus diesem Browser gelöscht; der Lernstand bleibt hier und auf GitHub erhalten.")) return;
+    Sync.disconnect();
+    RENDER.profile();
+  } else if (act.dataset.act === "sync-remote" || act.dataset.act === "sync-local") {
+    Sync.resolve(act.dataset.act === "sync-remote" ? "remote" : "local").then(() => RENDER.profile());
+  } else if (act.dataset.act === "export") {
     const blob = new Blob([Store.exportJson()], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -567,4 +635,4 @@ Content.ensure([
   Store.db.currentStoryId || Content.catalog[0].id,
   ...Store.db.cards.map(c => Content.storyIdOf(c.sentenceId)),
   ...Store.db.saved.map(s => Content.storyIdOf(s.sentenceId)),
-]).then(() => showView("today"));
+]).then(() => { showView("today"); Sync.start(); });
