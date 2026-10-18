@@ -14,7 +14,7 @@ Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge un
 ## Bereiche
 
 - **Heute** – aktuelle Geschichte weiterhören, fällige Karten, wie viele neue Karten heute sinnvoll sind
-- **Geschichten** – Bibliothek; Player mit Szenen, Hör- und Lesemodus, Tempo 0,75×/1×/1,25×, Satz wiederholen, Furigana/Romaji/Übersetzung zuschaltbar. Wort antippen → Lesung, Bedeutung, Grundform, Beispielsatz, Aussprache, „Zur Merkliste“
+- **Geschichten** – Bibliothek: jede Geschichte als kleiner Wandteppich mit einem Holzschnitt, der sich von unten nach oben „webt“, je mehr ihrer Wörter du kennst (bei 100 % mit 完-Stempel); Player mit Szenen, Hör- und Lesemodus, Tempo 0,75×/1×/1,25×, Satz wiederholen, Furigana/Romaji/Übersetzung zuschaltbar. Wort antippen → Lesung, Bedeutung, Grundform, Beispielsatz, Aussprache, „Zur Merkliste“
 - **Wortschatz-Check** – nach einer Geschichte: Wort zeigen, überlegen, aufdecken; „Gewusst“ = bekannt, „Nicht gewusst“ = Merkliste
 - **Merkliste** – gesammelte Wörter mit Beispielsatz und Herkunft; nach Häufigkeitsrang sortiert; höchstens 12 Karten pro Tag in Fach 1 (Rückfälle zählen mit)
 - **Lernkartei** – 5 Fächer wie eine echte Lernkartei: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen*, *Vertiefen* (ohne Furigana), *Langzeit*. Jeden Tag zuerst die **Tagesabfrage** – erst danach sind Geschichten und neue Wörter freigeschaltet. Von jeder Karte zurück zur Stelle in der Geschichte
@@ -70,6 +70,8 @@ js/app.js        Navigation und übrige Ansichten
 - **Bedeutungsvorschläge in der Werkstatt** (`data/werkstatt/jmdict-de.js`): deutsche Glossen aus [JMdict](https://www.edrdg.org/jmdict/j_jmdict.html) der EDRDG, CC BY-SA 4.0, erzeugt mit `tools/build-jmdict-de.ps1`. Wird nur von der Werkstatt geladen, nicht von der App.
 - **Geschichten:** eigene Texte und Nacherzählungen gemeinfreier Märchen (z. B. Momotarō). 「手袋を買いに」 von 新美南吉 (Niimi Nankichi, 1913–1943) stammt aus [Aozora Bunko](https://www.aozora.gr.jp/cards/000121/card637.html) (gemeinfrei) und ist ungekürzt übernommen; Wortzerlegung und deutsche Übersetzung sind eigene Arbeit.
 - **Sprachaufnahmen** (`data/audio/`): erzeugt mit [VOICEVOX](https://voicevox.hiroshiba.jp), Stimme **VOICEVOX:夜語トバリ** (ノーマル). Nutzung laut [Bedingungen der Stimme](https://yogataritobari.studio.site/#rules) mit dieser Nennung, nicht kommerziell.
+- **Bilder der Geschichten** (`data/art/`): gemeinfreie Holzschnitte über [Wikimedia Commons](https://commons.wikimedia.org), verkleinert – Kitagawa Utamaro „Junge Frau, einen Brief lesend“ (Metropolitan Museum of Art, CC0) · Utagawa Toyoharu „Momotarō und seine Tierfreunde besiegen die Dämonen“ · Utagawa Hiroshige „Fuchsfeuer beim Kleiderbaum von Ōji“, „Reisfelder von Asakusa und Torinomachi-Fest“, „Pflaumengarten in Kameido“ (alle 1857) und „Mishima, Morgennebel“ (Met, CC0) · Katsushika Hokusai „Gewitter unterhalb des Gipfels“. Die Nachweise stehen auch im Katalog (`art.credit`) und erscheinen beim Antippen/Überfahren des Bildes.
+- **Schrift für Titel:** Shippori Mincho (Google Fonts, SIL Open Font License).
 - Heisigs Schlüsselwörter und Geschichten sind urheberrechtlich geschützt und nicht enthalten.
 
 ## Sprachaufnahmen erzeugen

@@ -35,6 +35,21 @@ const rankBadge = vid => {
   return r ? `<span class="rank" title="Häufigkeitsrang im Japanischen (Leeds-Korpus)">#${r.toLocaleString("de-DE")}</span>` : "";
 };
 const storyTitle = id => { const s = Content.story(id); return s ? s.titleJp : ""; };
+
+// Wandteppich: Bild der Geschichte, von unten nach oben „gewebt“ – so weit, wie du ihre Wörter kennst
+// (Anteil wie bei der Wortabdeckung). Ohne eigenes Bild: Wellenmuster (青海波) mit dem Kachel-Kanji.
+function tapestry(m, pct, size = "") {
+  const fill = Math.max(0, Math.min(100, pct || 0));
+  const hue = [...m.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
+  const art = m.art
+    ? `<img src="${m.art.src}" alt="" loading="lazy" style="object-position:${m.art.pos || "50% 50%"}">`
+    : `<div class="tp-pattern" style="--hue:${hue}"><span class="jp">${escapeHtml(m.icon || "話")}</span></div>`;
+  const title = `${pct == null ? "" : `Gewebt: ${fill} % – so viele Wörter der Geschichte kennst du oder lernst du gerade.`}${m.art ? `\nBild: ${m.art.credit}` : ""}`;
+  return `<div class="tapestry ${size} ${fill >= 100 ? "done" : ""}" style="--fill:${fill}%" title="${escapeHtml(title)}">
+      <div class="tp-cloth"><div class="tp-ghost">${art}</div><div class="tp-woven">${art}</div></div>
+      ${fill >= 100 ? `<span class="tp-seal jp" aria-label="fertig gewebt">完</span>` : ""}
+    </div>`;
+}
 function fmtDue(t) {
   const now = Date.now();
   if (t <= now) return "jetzt";
@@ -74,7 +89,7 @@ RENDER.today = () => {
   $("#today").innerHTML = `
     <div class="panel today-next">${next}</div>
     <div class="panel story-hero ${gate ? "" : "locked"}">
-      <div class="story-art">${story.icon}</div>
+      ${tapestry(story, (Content.coverage(story.id, Store.status) || {}).pct, "large")}
       <div class="story-hero-body">
         <span class="kicker">Aktuelle Geschichte</span> ${levelBadge(story.level)}
         <h2><span class="jp">${story.titleJp}</span> <small>${escapeHtml(story.titleDe)}</small></h2>
@@ -118,7 +133,7 @@ RENDER.library = () => {
     const covCls = !cov ? "" : cov.pct >= 90 ? "high" : cov.pct >= 60 ? "mid" : "low";
     return `
       <button class="story-card" data-open-story="${m.id}">
-        <div class="story-art small">${m.icon}</div>
+        ${tapestry(m, cov ? cov.pct : null, "small")}
         <div class="story-card-body">
           <b>${levelBadge(m.level)} <span class="jp">${m.titleJp}</span> <small>${escapeHtml(m.titleDe)}</small></b>
           <span class="desc">${escapeHtml(m.description)}</span>
