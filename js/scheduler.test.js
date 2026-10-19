@@ -153,18 +153,19 @@ test("Jede Geschichte kommt mit dem gemeinsamen Wörterbuch und ihrem eigenen di
   }
 });
 
-test("Abdeckung: Anteil bekannter Wörter im Text (ohne Partikel und Namen)", () => {
+test("Abdeckung: nur gefestigte Wörter zählen (ohne Partikel und Namen), Rest nach Lernkartei/Merkliste", () => {
   const none = Content.coverage("neko", () => "unknown");
   eq(none.pct, 0);
   const all = Content.coverage("neko", () => "known");
   eq(all.pct, 100); eq(all.unknownWords, 0);
   const story = Content.story("neko");
-  const someVid = Object.keys(story.freq).find(Content.isLearnable);
-  const one = Content.coverage("neko", v => (v === someVid ? "active" : v === "ねこ" ? "saved" : "unknown"));
-  const total = Object.entries(story.freq).filter(([v]) => Content.isLearnable(v)).reduce((n, [, c]) => n + c, 0);
-  eq(one.pct, Math.round((story.freq[someVid] / total) * 100), "aktive Karten zählen als bekannt, gemerkte nicht");
+  const learnable = Object.keys(story.freq).filter(Content.isLearnable);
+  const [a, b, c] = learnable;
+  const mixed = Content.coverage("neko", v => (v === a ? "known" : v === b ? "learning" : v === c ? "saved" : "unknown"));
+  const total = learnable.reduce((n, v) => n + story.freq[v], 0);
+  eq(mixed.pct, Math.round((story.freq[a] / total) * 100), "Lernkartei (Fach 1–3) und Merkliste zählen noch nicht als bekannt");
+  eq(mixed.learning, 1); eq(mixed.saved, 1); eq(mixed.fresh, learnable.length - 3);
 });
-
 // ---------- Kanji (Heisig) ----------
 test("Heisig-Reihenfolge stimmt mit der deutschen Ausgabe überein", () => {
   eq(Heisig.TOTAL, 2200);

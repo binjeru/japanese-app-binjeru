@@ -72,6 +72,15 @@ const Store = (() => {
     if (db.userVocab[vid] && db.userVocab[vid].known) return "known";
     return "unknown";
   }
+  // Wie gut sitzt ein Wort? Für Wortabdeckung und Wandteppich: „known“ erst ab Fach 4 (gefestigt)
+  // oder wenn es ausdrücklich als bekannt markiert ist; Fach 1–3 = „learning“.
+  function mastery(vid) {
+    const c = cardOf(vid);
+    if (c) return Scheduler.boxOf(c) >= 4 ? "known" : "learning";
+    if (savedOf(vid)) return "saved";
+    if (db.userVocab[vid] && db.userVocab[vid].known) return "known";
+    return "unknown";
+  }
   function uv(vid) {
     return db.userVocab[vid] || (db.userVocab[vid] = { known: false, firstSeenAt: null, lastSeenAt: null, encounterCount: 0 });
   }
@@ -201,7 +210,7 @@ const Store = (() => {
 
   return {
     get db() { return db; }, persist, onChange, touchDay,
-    status, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
+    status, mastery, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
     activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, activate, review, practice,
     progress, setPosition, startedListening, completed, streak,
     exportJson, importJson, reset,

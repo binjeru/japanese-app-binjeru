@@ -44,7 +44,7 @@ function tapestry(m, pct, size = "") {
   const art = m.art
     ? `<img src="${m.art.src}" alt="" loading="lazy" style="object-position:${m.art.pos || "50% 50%"}">`
     : `<div class="tp-pattern" style="--hue:${hue}"><span class="jp">${escapeHtml(m.icon || "話")}</span></div>`;
-  const title = `${pct == null ? "" : `Gewebt: ${fill} % – so viele Wörter der Geschichte kennst du oder lernst du gerade.`}${m.art ? `\nBild: ${m.art.credit}` : ""}`;
+  const title = `${pct == null ? "" : `Gewebt: ${fill} % – so viele Wörter der Geschichte sitzen (als bekannt markiert oder ab Fach 4).`}${m.art ? `\nBild: ${m.art.credit}` : ""}`;
   return `<div class="tapestry ${size} ${fill >= 100 ? "done" : ""}" style="--fill:${fill}%" title="${escapeHtml(title)}">
       <div class="tp-cloth"><div class="tp-ghost">${art}</div><div class="tp-woven">${art}</div></div>
       ${fill >= 100 ? `<span class="tp-seal jp" aria-label="fertig gewebt">完</span>` : ""}
@@ -89,7 +89,7 @@ RENDER.today = () => {
   $("#today").innerHTML = `
     <div class="panel today-next">${next}</div>
     <div class="panel story-hero ${gate ? "" : "locked"}">
-      ${tapestry(story, (Content.coverage(story.id, Store.status) || {}).pct, "large")}
+      ${tapestry(story, (Content.coverage(story.id, Store.mastery) || {}).pct, "large")}
       <div class="story-hero-body">
         <span class="kicker">Aktuelle Geschichte</span> ${levelBadge(story.level)}
         <h2><span class="jp">${story.titleJp}</span> <small>${escapeHtml(story.titleDe)}</small></h2>
@@ -129,8 +129,14 @@ RENDER.library = () => {
       <button class="primary" data-goto-session>Tagesabfrage starten</button></div>` : "") + Content.catalog.map(m => {
     const s = Content.story(m.id); // null, solange noch nicht geladen
     const p = Store.progress(m.id);
-    const cov = s && Content.coverage(m.id, Store.status);
+    const cov = s && Content.coverage(m.id, Store.mastery);
     const covCls = !cov ? "" : cov.pct >= 90 ? "high" : cov.pct >= 60 ? "mid" : "low";
+    // Was von den noch nicht gefestigten Wörtern schon unterwegs ist
+    const open = cov ? [
+      cov.learning ? `${cov.learning} in der Lernkartei` : "",
+      cov.saved ? `${cov.saved} auf der Merkliste` : "",
+      cov.fresh ? `${cov.fresh} neu` : "",
+    ].filter(Boolean).join(" · ") : "";
     return `
       <button class="story-card" data-open-story="${m.id}">
         ${tapestry(m, cov ? cov.pct : null, "small")}
@@ -138,9 +144,10 @@ RENDER.library = () => {
           <b>${levelBadge(m.level)} <span class="jp">${m.titleJp}</span> <small>${escapeHtml(m.titleDe)}</small></b>
           <span class="desc">${escapeHtml(m.description)}</span>
           <span class="meta">${m.own ? "Eigene Geschichte · " : ""}${levelRest(m.level) ? `${escapeHtml(levelRest(m.level))} · ` : ""}${escapeHtml(m.genre)}${s ? ` · ${s.scenes.length} ${s.scenes.length === 1 ? "Szene" : "Szenen"} · ca. ${estMinutes(s)} Min.` : ""}${p.listenCount ? ` · ${p.listenCount}× gehört` : ""}</span>
-          ${cov ? `<span class="coverage ${covCls}" title="Anteil der Wörter im Text, die du kennst oder in der Lernkartei hast (ohne Partikel und Namen)">
+          ${cov ? `<span class="coverage ${covCls}" title="Anteil der Wörter im Text, die sitzen: als bekannt markiert oder in der Lernkartei ab Fach 4 (ohne Partikel und Namen)">
             <span class="coverage-bar"><span style="width:${cov.pct}%"></span></span>
-            Du kennst ${cov.pct} % der Wörter${cov.unknownWords ? ` · ${cov.unknownWords} neue` : ""}</span>` : `<span class="meta">wird geladen …</span>`}
+            Du kennst ${cov.pct} % der Wörter</span>
+            ${open ? `<span class="meta cov-open">Noch offen: ${open}</span>` : ""}` : `<span class="meta">wird geladen …</span>`}
           ${s && p.position > 0 ? `<div class="progress"><div class="progress-bar" style="width:${(p.position / s.flat.length) * 100}%"></div></div>` : ""}
         </div>
       </button>`;
@@ -603,8 +610,14 @@ async function deleteOwnStory(id) {
   } catch (err) { toast(`Löschen fehlgeschlagen: ${err.message}`); }
 }
 
+// Kanji-Vorschläge (privates Daten-Repo): nach dem Laden die Kanji-Ansicht auffrischen
+KanjiSuggest.onChange(() => { if (currentView === "kanji") RENDER.kanji(); });
+
 Sync.onUpdate((st, what) => {
-  if (st.status === "ok") OwnStories.refresh().catch(err => console.warn(err));
+  if (st.status === "ok") {
+    OwnStories.refresh().catch(err => console.warn(err));
+    KanjiSuggest.refresh().catch(err => console.warn(err));
+  }
   if (what === "imported") {
     toast("Lernstand von GitHub übernommen");
     // Laufende Geschichte oder Abfrage nicht unterbrechen
@@ -642,9 +655,9 @@ $("#profile").addEventListener("click", e => {
     Sync.now()
       .then(() => {
         if (Sync.state.status === "error") throw new Error(Sync.state.message);
-        return OwnStories.refresh(true);
+        return Promise.all([OwnStories.refresh(true), KanjiSuggest.refresh(true)]).then(([a, b]) => a || b);
       })
-      .then(any => toast(any ? "Abgeglichen – eigene Geschichten aktualisiert" : "Abgeglichen ✓"))
+      .then(any => toast(any ? "Abgeglichen – Neues geladen" : "Abgeglichen ✓"))
       .catch(err => toast(`Abgleich fehlgeschlagen: ${err.message}`))
       .finally(() => { act.disabled = false; if (currentView === "profile") RENDER.profile(); });
   } else if (act.dataset.act === "sync-off") {

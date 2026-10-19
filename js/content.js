@@ -140,20 +140,27 @@ const Content = (() => {
   }
 
   // Wie viel einer Geschichte ist schon verständlich? Anteil der Wortvorkommen (ohne Partikel,
-  // Namen, Satzzeichen), deren Wort bekannt ist oder in der Lernkartei liegt.
+  // Namen, Satzzeichen), deren Wort sitzt. statusOf liefert "known" | "learning" | "saved" | "unknown"
+  // (siehe Store.mastery: bekannt erst ab Fach 4). Dazu: wie viele der übrigen Wörter schon in
+  // der Lernkartei bzw. auf der Merkliste liegen.
   function coverage(storyId, statusOf) {
     const story = storiesById[storyId];
     if (!story) return null;
     let total = 0, known = 0;
-    const unknownWords = new Set();
+    const open = { learning: 0, saved: 0, unknown: 0 };
     for (const [vid, n] of Object.entries(story.freq)) {
       if (!isLearnable(vid)) continue;
       total += n;
       const st = statusOf(vid);
-      if (st === "known" || st === "active") known += n;
-      else unknownWords.add(vid);
+      if (st === "known") known += n;
+      else open[st in open ? st : "unknown"]++;
     }
-    return { pct: total ? Math.round((known / total) * 100) : 100, unknownWords: unknownWords.size, words: Object.keys(story.freq).filter(isLearnable).length };
+    return {
+      pct: total ? Math.round((known / total) * 100) : 100,
+      unknownWords: open.learning + open.saved + open.unknown,
+      learning: open.learning, saved: open.saved, fresh: open.unknown,
+      words: Object.keys(story.freq).filter(isLearnable).length,
+    };
   }
 
   // Sprachaufnahme eines Satzes (null = keine, dann Browser-Stimme)

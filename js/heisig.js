@@ -13,8 +13,12 @@ const Heisig = (() => {
   const frame = n => KANJI[n - 1];
   const cardOf = n => h().cards.find(c => c.frame === n);
   const entry = n => h().frames[n] || { keyword: "", story: "" };
-  // Schlüsselwort aus dem Buch; ohne Eintrag dient die englische Bedeutung als Notlösung
-  const keyword = n => entry(n).keyword || "";
+  // Vorschlag aus dem eigenen Anki-Deck (js/kanji-suggest.js): { kw, s } oder null
+  const suggestion = n => (typeof KanjiSuggest !== "undefined" && KanjiSuggest.get(n)) || null;
+  // Schlüsselwort: eigener Eintrag, sonst Vorschlag; ohne beides dient die englische Bedeutung als Notlösung
+  const keyword = n => entry(n).keyword || (suggestion(n) || {}).kw || "";
+  // Merkgeschichte: eigene, sonst die vorgeschlagene (z. B. bei als gelernt übernommenen Rahmen)
+  const storyOf = n => entry(n).story || (suggestion(n) || {}).s || "";
   const promptText = n => keyword(n) || `(engl.) ${frame(n).en.split(", ")[0]}`;
 
   function status(n) {
@@ -94,7 +98,7 @@ const Heisig = (() => {
   function setNewPerDay(n) { h().newPerDay = n; Store.persist(); }
 
   return {
-    KANJI, TOTAL, frame, byKanji: k => byKanji[k] || null, cardOf, entry, keyword, promptText, status,
+    KANJI, TOTAL, frame, byKanji: k => byKanji[k] || null, cardOf, entry, suggestion, keyword, storyOf, promptText, status,
     activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, nextFrame,
     learn, saveEntry, markLearnedUntil, review, practice, setNewPerDay,
     get unlocked() { return h().unlocked; }, get newPerDay() { return h().newPerDay; },

@@ -89,7 +89,9 @@ const KanjiView = (() => {
           <button class="secondary" data-k="until">Übernehmen</button></div>
           <p class="hint">Übernommene Rahmen kommen gestaffelt über zwei Wochen zur Wiederholung.</p></div>
         <p class="hint">Reihenfolge und Nummern entsprechen „Die Kanji lernen und behalten 1“ (6. Auflage, 2200 Zeichen).
-          Schlüsselwörter und Geschichten aus dem Buch trägst du selbst ein – sie sind urheberrechtlich geschützt und deshalb nicht enthalten.</p>
+          Schlüsselwörter und Geschichten aus dem Buch sind urheberrechtlich geschützt und deshalb nicht in der App enthalten.
+          ${KanjiSuggest.count ? `Vorschläge aus deinem Anki-Deck: <b>${KanjiSuggest.count}</b> Rahmen (privat in deinem Daten-Repo) – beim ersten Lernen übernimmst du die Geschichte oder schreibst eine eigene.`
+            : "Vorschläge aus deinem Anki-Deck werden über den Abgleich mit GitHub geladen; ohne sie trägst du Schlüsselwort und Geschichte selbst ein."}</p>
       </div>`;
     segmented($("#k-perday", root), String(Heisig.newPerDay), v => { Heisig.setNewPerDay(Number(v)); renderOverview(); });
   }
@@ -115,6 +117,10 @@ const KanjiView = (() => {
     }
     const k = Heisig.frame(n);
     const e = Heisig.entry(n);
+    const sug = Heisig.suggestion(n);
+    // Mit Vorschlag (eigenes Anki-Deck): Geschichte übernehmen oder selbst neu schreiben
+    if (K.learnFrame !== n) { K.learnFrame = n; K.write = false; }
+    const proposal = sug && sug.s && !e.story ? sug : null;
     root.innerHTML = `
       <div class="session-top"><span class="hint on-page">Neuer Rahmen · heute noch ${allowance}</span><button class="link on-page" data-k="overview">Beenden</button></div>
       <div class="panel kanji-learn">
@@ -122,14 +128,36 @@ const KanjiView = (() => {
         <div class="kanji-stage" id="k-stage"></div>
         <div class="row center"><button class="secondary" data-k="replay">↻ Strichfolge</button></div>
         ${facts(k)}
-        <div class="field"><label for="k-keyword">Schlüsselwort aus deinem Buch</label>
-          <input id="k-keyword" class="text-input" value="${escapeHtml(e.keyword)}" placeholder="z. B. Wasser" autocomplete="off"></div>
-        <div class="field"><label for="k-story">Deine Geschichte / dein Merksatz <span class="hint">(optional)</span></label>
-          <textarea id="k-story" class="text-input" rows="3" placeholder="Bilder aus den Bestandteilen …">${escapeHtml(e.story)}</textarea></div>
-        <div class="row center"><button class="primary big" data-k="learned">Gelernt – weiter</button></div>
+        <div class="field"><label for="k-keyword">Schlüsselwort</label>
+          <input id="k-keyword" class="text-input kw-input" value="${escapeHtml(e.keyword || (sug && sug.kw) || "")}" placeholder="z. B. Wasser" autocomplete="off"></div>
+        ${proposal && !K.write ? `
+          <div class="field"><label>Merkgeschichte (Vorschlag)</label>
+            <div class="kanji-story proposal">${escapeHtml(proposal.s)}</div></div>
+          <div class="row center">
+            <button class="secondary" data-k="write">✎ Neu schreiben</button>
+            <button class="primary big" data-k="accept">✓ Übernehmen – weiter</button>
+          </div>` : `
+          <div class="field"><label for="k-story">Deine Geschichte / dein Merksatz <span class="hint">(optional)</span></label>
+            ${sug && sug.s ? `<p class="hint proposal-ref">Vorschlag: ${escapeHtml(sug.s)}</p>` : ""}
+            <textarea id="k-story" class="text-input" rows="3" placeholder="Bilder aus den Bestandteilen …">${escapeHtml(e.story)}</textarea></div>
+          <div class="row center">
+            ${proposal ? `<button class="secondary" data-k="unwrite">Doch den Vorschlag nehmen</button>` : ""}
+            <button class="primary big" data-k="learned">Gelernt – weiter</button>
+          </div>`}
       </div>`;
     drawKanji($("#k-stage", root), n);
-    $("#k-keyword", root).focus();
+    if (K.write) $("#k-story", root).focus();
+    else if (!$("#k-keyword", root).value) $("#k-keyword", root).focus();
+  }
+
+  // Rahmen als gelernt eintragen (Schlüsselwort + Geschichte) und zum nächsten
+  function learnCurrent(story) {
+    const kw = $("#k-keyword", root).value;
+    if (!kw.trim() && !confirm("Ohne Schlüsselwort weiter? Bei der Abfrage wird dann die englische Bedeutung angezeigt.")) return;
+    Heisig.learn(Heisig.nextFrame(), kw, story);
+    K.learnedNow = (K.learnedNow || 0) + 1;
+    renderLearn();
+    window.scrollTo(0, 0);
   }
 
   // ---------- Wiederholen (Schlüsselwort → Kanji) ----------
@@ -166,7 +194,7 @@ const KanjiView = (() => {
         <span class="tag box-tag box4-${box}">${BOX_LABEL(box)}</span>
         <div class="frame-no">Rahmen ${n}</div>
         <div class="kanji-keyword">${escapeHtml(Heisig.promptText(n))}</div>
-        ${e.story ? (K.storyOpen || K.revealed ? `<div class="kanji-story">${escapeHtml(e.story)}</div>` : `<button class="link" data-k="story">Meine Geschichte zeigen</button>`) : ""}
+        ${Heisig.storyOf(n) ? (K.storyOpen || K.revealed ? `<div class="kanji-story">${escapeHtml(Heisig.storyOf(n))}</div>` : `<button class="link" data-k="story">${e.story ? "Meine Geschichte zeigen" : "Geschichte zeigen"}</button>`) : ""}
         ${K.revealed ? `
           ${K.check ? `
             <div class="draw-compare">
@@ -243,8 +271,8 @@ const KanjiView = (() => {
         <div class="kanji-stage" id="k-stage"></div>
         <div class="row center"><button class="secondary" data-k="replay">↻ Strichfolge</button></div>
         ${facts(k)}
-        <div class="field"><label for="k-keyword">Schlüsselwort</label><input id="k-keyword" class="text-input" value="${escapeHtml(e.keyword)}" autocomplete="off"></div>
-        <div class="field"><label for="k-story">Geschichte / Merksatz</label><textarea id="k-story" class="text-input" rows="3">${escapeHtml(e.story)}</textarea></div>
+        <div class="field"><label for="k-keyword">Schlüsselwort</label><input id="k-keyword" class="text-input" value="${escapeHtml(Heisig.keyword(n))}" autocomplete="off"></div>
+        <div class="field"><label for="k-story">Geschichte / Merksatz</label><textarea id="k-story" class="text-input" rows="3">${escapeHtml(Heisig.storyOf(n))}</textarea></div>
         <div class="row center"><button class="primary" data-k="save">Speichern</button></div>
       </div>`;
     drawKanji($("#k-stage", root), n);
@@ -268,13 +296,13 @@ const KanjiView = (() => {
       case "review": startReview("due"); break;
       case "practice": startReview("practice"); break;
       case "replay": { const st = $("#k-stage", root); const n = K.mode === "review" ? Store.db.heisig.cards.find(c => c.id === K.queue[0]).frame : K.mode === "detail" ? K.frame : Heisig.nextFrame(); drawKanji(st, n); break; }
-      case "learned": {
-        const kw = $("#k-keyword", root).value;
-        if (!kw.trim() && !confirm("Ohne Schlüsselwort weiter? Bei der Abfrage wird dann die englische Bedeutung angezeigt.")) return;
-        Heisig.learn(Heisig.nextFrame(), kw, $("#k-story", root).value);
-        K.learnedNow = (K.learnedNow || 0) + 1;
+      case "learned": learnCurrent($("#k-story", root).value); break;
+      case "accept": learnCurrent(Heisig.suggestion(Heisig.nextFrame()).s); break;
+      case "write": case "unwrite": {
+        const kw = $("#k-keyword", root).value;   // schon geändertes Schlüsselwort behalten
+        K.write = act.dataset.k === "write";
         renderLearn();
-        window.scrollTo(0, 0);
+        $("#k-keyword", root).value = kw;
         break;
       }
       case "story": K.storyOpen = true; renderReview(); break;
