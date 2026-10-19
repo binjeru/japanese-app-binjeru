@@ -432,7 +432,7 @@ const Deck = (() => {
           ${box >= 3 && !S.revealed ? `<button class="secondary ${S.showFuri ? "on" : ""}" data-act="furi" aria-pressed="${!!S.showFuri}">${S.showFuri ? "ふ Furigana aus" : "ふ Furigana"}</button>` : ""}
           ${S.revealed && s && Store.gateOpen() ? `<button class="secondary" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">↗ Zur Geschichte</button>` : ""}
         </div>
-        ${S.revealed && s ? `<p class="hint center">Aus <span class="jp">${storyTitle(s.storyId)}</span> · Szene ${s.sceneIndex + 1} · Wort im Satz antippen = Details &amp; Merkliste</p>` : ""}
+        ${S.revealed && s ? `<p class="hint center">Aus <span class="jp">${storyTitle(s.storyId)}</span> · Szene ${s.sceneIndex + 1}</p>` : ""}
         <div class="row center rate-row">
           ${S.revealed ? `
             <button class="rate bad" data-act="again">Noch nicht <kbd>1</kbd></button>
