@@ -3,6 +3,12 @@
 // Jeder Satz wird n-mal wiederholt, dazwischen eine Pause (mindestens so lang wie der Satz + 0,5 s);
 // nach dem letzten Satz geht es wieder von vorn, bis man stoppt.
 // Statistik in db.shadow: wie oft jeder Satz beim Shadowing gehört wurde.
+//
+// Auch bei ausgeschaltetem Bildschirm: Aufnahmen und Pausen laufen über dasselbe Audio-Element –
+// die Pause ist eine kurze Stille-Datei statt eines Timers. So spielt ohne Unterbrechung Ton, Chrome
+// behandelt die Seite wie einen Musikplayer, und die „ended“-Ereignisse treiben die Schleife weiter.
+// Dazu Steuerung auf dem Sperrbildschirm (Media Session). Sätze ohne Aufnahme (Browser-Stimme)
+// funktionieren nur bei eingeschaltetem Bildschirm.
 
 const Shadow = (() => {
   const root = $("#shadow");
@@ -65,10 +71,38 @@ const Shadow = (() => {
       audio.play().catch(err => { if (err.name !== "AbortError" && !done) tts(); });
     });
   }
-  function wait(sec) {
+  // Stille als WAV-Datei (8 kHz, 8 Bit, mono – 8 KB pro Sekunde), auf Zehntelsekunden gerundet und gemerkt
+  const silenceCache = {};
+  function silenceUrl(sec) {
+    const key = Math.max(1, Math.round(sec * 10));
+    if (silenceCache[key]) return silenceCache[key];
+    const rate = 8000, n = Math.round((key / 10) * rate);
+    const buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const str = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVE"); str(12, "fmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+    str(36, "data"); v.setUint32(40, n, true);
+    new Uint8Array(buf, 44).fill(128);   // 128 = Nulllinie bei 8 Bit
+    return (silenceCache[key] = URL.createObjectURL(new Blob([buf], { type: "audio/wav" })));
+  }
+  // Pause: mit Aufnahmen als Stille im selben Audio-Element (läuft auch bei ausgeschaltetem Bildschirm),
+  // sonst (Browser-Stimme) per Timer. Liefert false bei Abbruch.
+  function wait(sec, viaAudio) {
     return new Promise(resolve => {
-      const t = setTimeout(() => { cancel = null; resolve(true); }, sec * 1000);
-      cancel = () => { clearTimeout(t); cancel = null; resolve(false); };
+      if (!viaAudio) {
+        const t = setTimeout(() => { cancel = null; resolve(true); }, sec * 1000);
+        cancel = () => { clearTimeout(t); cancel = null; resolve(false); };
+        return;
+      }
+      let done = false;
+      const finish = ok => { if (done) return; done = true; cancel = null; resolve(ok); };
+      cancel = () => { audio.pause(); finish(false); };
+      audio.onended = () => finish(true);
+      audio.onerror = () => finish(true);
+      audio.src = silenceUrl(sec);
+      audio.playbackRate = 1;
+      audio.play().catch(err => { if (err.name !== "AbortError") finish(true); });
     });
   }
 
@@ -79,25 +113,51 @@ const Shadow = (() => {
     const day = Scheduler.dayKey(Date.now());
     st.days[day] = (st.days[day] || 0) + 1;
     Store.touchDay();
-    // Lokal sofort sichern, abgeglichen wird gesammelt (alle 10 Sätze und beim Stoppen)
-    if (++SH.dirty >= 10) flush(); else Store.persist(false);
+    // Nach jedem Satz lokal sichern; abgeglichen wird gesammelt (alle 10 Sätze, beim Stoppen und beim
+    // Zurückkehren in die App) – bei ausgeschaltetem Bildschirm nichts übers Netz
+    if (++SH.dirty >= 10 && !document.hidden) flush(); else Store.persist(false);
   }
   function flush() { if (SH.dirty) { SH.dirty = 0; Store.persist(); } }
+
+  // ---------- Sperrbildschirm (Media Session) ----------
+  const ms = "mediaSession" in navigator ? navigator.mediaSession : null;
+  function updateMedia() {
+    if (!ms) return;
+    const s = SH.list[SH.i];
+    if (!SH.playing || !s) { ms.metadata = null; ms.playbackState = "none"; return; }
+    const m = Content.meta(s.storyId) || {};
+    ms.metadata = new MediaMetadata({
+      title: s.text,
+      artist: `Shadowing · Satz ${SH.i + 1}/${SH.list.length} · ${SH.rep}/${prefs().reps}`,
+      album: m.titleJp || "Binjeru",
+      artwork: m.art ? [{ src: new URL(m.art.src, location.href).href, sizes: "480x480", type: "image/jpeg" }] : [],
+    });
+    ms.playbackState = SH.phase === "paused" ? "paused" : "playing";
+  }
+  if (ms) {
+    const on = (action, fn) => { try { ms.setActionHandler(action, fn); } catch { /* nicht unterstützt */ } };
+    on("play", () => { if (SH.playing && SH.phase === "paused") pauseToggle(); });
+    on("pause", () => { if (SH.playing && SH.phase !== "paused") pauseToggle(); });
+    on("nexttrack", () => { if (SH.playing) skip(1); });
+    on("previoustrack", () => { if (SH.playing) skip(-1); });
+    on("stop", () => { if (SH.playing) stop(); });
+  }
 
   async function loop(run) {
     while (SH.playing && run === SH.run && SH.list.length) {
       const s = SH.list[SH.i];
       SH.phase = "listen";
       renderPlaying();
+      updateMedia();
       const sec = await playOnce(s);
       if (run !== SH.run) return;
-      count(s);
+      if (sec > 0) count(s);           // nur vollständig gespielte Sätze zählen
       const pause = Math.max(prefs().pause, sec + MIN_GAP);
       SH.phase = "speak";
       SH.pauseStart = Date.now();
       SH.pauseLen = pause;
       renderPlaying();
-      if (!(await wait(pause)) || run !== SH.run) return;
+      if (!(await wait(pause, !!Content.audioUrl(s))) || run !== SH.run) return;
       // nächste Wiederholung, sonst nächster Satz (nach dem letzten wieder der erste)
       if (SH.rep < prefs().reps) SH.rep++;
       else { SH.rep = 1; SH.i = (SH.i + 1) % SH.list.length; }
@@ -108,8 +168,11 @@ const Shadow = (() => {
     const list = selected();
     if (!list.length) { toast("Bitte mindestens einen Satz auswählen."); return; }
     SH = { ...SH, playing: true, list, i: 0, rep: 1, run: SH.run + 1 };
-    try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { wakeLock = null; }   // Bildschirm bleibt an
     loop(SH.run);
+    // Sätze ohne Aufnahme brauchen den eingeschalteten Bildschirm: dann bleibt er an
+    if (list.some(s => !Content.audioUrl(s))) {
+      try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { wakeLock = null; }
+    }
   }
   function pauseToggle() {
     if (SH.phase === "paused") { SH.run++; loop(SH.run); return; }
@@ -118,6 +181,7 @@ const Shadow = (() => {
     SH.phase = "paused";
     flush();
     renderPlaying();
+    updateMedia();
   }
   function skip(d) {
     SH.run++;
@@ -133,6 +197,8 @@ const Shadow = (() => {
     SH.phase = "";
     flush();
     if (wakeLock) { wakeLock.release().catch(() => {}); wakeLock = null; }
+    audio.removeAttribute("src");
+    updateMedia();
     renderSetup();
   }
 
@@ -153,7 +219,7 @@ const Shadow = (() => {
     const today = st.days[Scheduler.dayKey(Date.now())] || 0;
     root.innerHTML = `
       <div class="panel shadow-setup">
-        <p class="hint">Hören, dann in der Pause laut nachsprechen. Die Sätze laufen in Schleife, bis du stoppst.</p>
+        <p class="hint">Hören, dann in der Pause laut nachsprechen. Die Sätze laufen in Schleife, bis du stoppst – auch bei ausgeschaltetem Bildschirm, Steuerung dann auf dem Sperrbildschirm.</p>
         <div class="field"><label for="sh-source">Sätze aus</label>
           <select id="sh-source" class="text-input">${sources().map(o => {
             const n = sentencesOf(o.id).length;
@@ -179,7 +245,7 @@ const Shadow = (() => {
         ${all.length ? `<ul class="sh-list">${all.map(s => `
           <li><label>
             <input type="checkbox" data-sid="${s.id}" ${SH.excluded.has(s.id) ? "" : "checked"}>
-            <span class="sh-text"><span class="jp">${escapeHtml(s.text)}</span><small>${escapeHtml(s.de)}</small></span>
+            <span class="sh-text"><span class="jp">${escapeHtml(s.text)}</span><small>${escapeHtml(s.de)}${Content.audioUrl(s) ? "" : " · 🔈 ohne Aufnahme (nur bei eingeschaltetem Bildschirm)"}</small></span>
             <span class="sh-count" title="So oft beim Shadowing gehört">${st.plays[s.id] ? `${st.plays[s.id]}×` : ""}</span>
           </label></li>`).join("")}</ul>` : `<p class="hint">Hier sind noch keine Sätze. Wähle oben eine andere Quelle.</p>`}
       </div>`;
@@ -234,8 +300,8 @@ const Shadow = (() => {
     else if (t.dataset.sid) { t.checked ? SH.excluded.delete(t.dataset.sid) : SH.excluded.add(t.dataset.sid); renderSetup(); }
     else if (t.dataset.pref) { prefs()[t.dataset.pref] = t.checked; Store.persist(); renderPlaying(); }
   });
-  // Beim Verlassen der App: Zähler abgleichen
-  document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); });
+  // Beim Ausschalten des Bildschirms und beim Zurückkehren: gesammelte Zähler abgleichen
+  document.addEventListener("visibilitychange", flush);
 
   function onKey(e) {
     if (!SH.playing) return;
