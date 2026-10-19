@@ -2,7 +2,7 @@
 // Oberfläche: Navigation und Ansichten (Heute, Bibliothek, Merkliste, Wortschatz-Check, Lernkartei, Profil)
 
 // ---------- Navigation ----------
-const TAB_OF = { player: "library", check: "library", kana: "profile" };
+const TAB_OF = { player: "library", check: "library", kana: "profile", top: "profile" };
 const RENDER = {};
 let currentView = "today";
 
@@ -31,9 +31,12 @@ document.addEventListener("click", e => {
 });
 
 const wordHtml = (vid, furigana = true) => furiganaHtml(Content.display(vid), Content.reading(vid));
+// Platz in der Häufigkeitsrangliste der lernbaren Wörter – dieselbe Nummer wie in der Übersicht „Top 2000“
 const rankBadge = vid => {
   const r = Content.rank(vid);
-  return r ? `<span class="rank" title="Häufigkeitsrang im Japanischen (Leeds-Korpus)">#${r.toLocaleString("de-DE")}</span>` : "";
+  if (!r) return "";
+  const top = r <= 2000;
+  return ` <span class="rank ${top ? "top" : ""}" title="Platz ${r.toLocaleString("de-CH")} der häufigsten Wörter des Japanischen (Leeds-Korpus, ohne Partikel)${top ? " – gehört zu den Top 2000" : ""}">#${r.toLocaleString("de-CH")}${top ? " · Top 2000" : ""}</span>`;
 };
 const storyTitle = id => { const s = Content.story(id); return s ? s.titleJp : ""; };
 
@@ -502,16 +505,33 @@ RENDER.profile = () => {
   const db = Store.db;
   if (Content.stories.length < Content.catalog.length) Content.loadAll().then(() => currentView === "profile" && RENDER.profile());
   const allVocab = [...new Set(Content.stories.flatMap(s => Content.storyVocab(s.id)))];
-  const count = st => allVocab.filter(v => Store.status(v) === st).length;
+  const count = st => allVocab.filter(v => Store.mastery(v) === st).length;
   const good = db.reviews.filter(r => r.rating === "good").length;
+  const top = TopWords.summary();   // null, solange die Liste noch lädt
+  if (!top) TopWords.load().then(() => currentView === "profile" && RENDER.profile());
+  const shadowTotal = (db.shadow && db.shadow.total) || 0;
+  // Kachel; mit Ziel klickbar (→)
+  const stat = (value, label, goto) => goto
+    ? `<button class="stat stat-link" data-goto="${goto}"><b>${value}</b><span>${label}</span><i aria-hidden="true">→</i></button>`
+    : `<div class="stat"><b>${value}</b><span>${label}</span></div>`;
   $("#profile").innerHTML = `
+    <button class="panel top-tile" data-goto="top">
+      <span class="top-tile-head"><b>Top 2000</b><span class="hint">die häufigsten Wörter des Japanischen</span></span>
+      ${top ? `<span class="top-tile-num"><b>${top.known}</b> / ${top.total} gefestigt</span>
+        <span class="top-bar">${["known", "learning", "saved"].map(k => `<span class="tb-${k}" style="width:${(top[k] / top.total) * 100}%"></span>`).join("")}</span>
+        <span class="hint">${top.learning} in der Lernkartei · ${top.saved} auf der Merkliste · ${top.inStories} kommen in deinen Geschichten vor</span>`
+        : `<span class="hint">wird geladen …</span>`}
+      <i aria-hidden="true">→</i>
+    </button>
     <div class="stats">
-      <div class="stat"><b>${count("known")}</b><span>bekannte Wörter</span></div>
-      <div class="stat"><b>${db.cards.length}</b><span>aktive Lernkarten</span></div>
-      <div class="stat"><b>${db.saved.length}</b><span>in der Merkliste</span></div>
-      <div class="stat"><b>${count("unknown")}</b><span>noch nicht gelernt</span></div>
-      <div class="stat"><b>${db.reviews.length}</b><span>Wiederholungen${db.reviews.length ? ` · ${Math.round((good / db.reviews.length) * 100)} % gewusst` : ""}</span></div>
-      <div class="stat"><b>${Store.streak()}</b><span>Lerntage in Folge</span></div>
+      ${stat(count("known"), "Wörter gefestigt<br><small>bekannt oder ab Fach 4</small>")}
+      ${stat(db.cards.length, "Lernkarten", "deck")}
+      ${stat(db.saved.length, "in der Merkliste", "saved")}
+      ${stat(count("unknown"), "Wörter in Geschichten noch offen", "library")}
+      ${stat(db.reviews.length, `Wiederholungen${db.reviews.length ? ` · ${Math.round((good / db.reviews.length) * 100)} % gewusst` : ""}`, "deck")}
+      ${stat(`${Heisig.unlocked}<small> / ${Heisig.TOTAL}</small>`, "Kanji gelernt", "kanji")}
+      ${stat(shadowTotal, "Sätze nachgesprochen", "shadow")}
+      ${stat(Store.streak(), "Lerntage in Folge")}
     </div>
     <div class="panel">
       <h3>Geschichten</h3>
@@ -704,6 +724,7 @@ $("#profile").addEventListener("change", e => {
 RENDER.kana = () => KanaPractice.refresh();
 RENDER.kanji = () => KanjiView.render();
 RENDER.shadow = () => Shadow.render();
+RENDER.top = () => TopWords.render();
 
 // ---------- Tastatur ----------
 document.addEventListener("keydown", e => {

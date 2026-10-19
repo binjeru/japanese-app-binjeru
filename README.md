@@ -20,7 +20,8 @@ Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge un
 - **Lernkartei** – 5 Fächer wie eine echte Lernkartei: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen*, *Vertiefen* (ohne Furigana), *Langzeit*. Jeden Tag zuerst die **Tagesabfrage** – erst danach sind Geschichten und neue Wörter freigeschaltet. Von jeder Karte zurück zur Stelle in der Geschichte
 - **Shadowing** – Sätze hören und in der Pause laut nachsprechen: Quelle wählen (Fach 1–5, alle Lernkarten, Merkliste oder eine Geschichte), einzelne Sätze an- oder abwählen, Wiederholungen pro Satz (1–10), Pause (2–8 s, mindestens Satzlänge + 0,5 s) und Tempo einstellen. Die Sätze laufen in Schleife, bis man stoppt – auch bei ausgeschaltetem Bildschirm (Pausen sind Stille im selben Audio-Element statt Timer; Steuerung über den Sperrbildschirm). Text, Furigana und Übersetzung zuschaltbar; Sätze ohne Aufnahme (Browser-Stimme) nur bei eingeschaltetem Bildschirm. Zähler, wie oft jeder Satz gehört wurde (heute / insgesamt)
 - **Kanji** – eigenständige Heisig-Kartei („Die Kanji lernen und behalten 1“, 2200 Rahmen): Rahmen strikt in Heisigs Reihenfolge freischalten, Schlüsselwort und Merkgeschichte als Vorschlag aus dem eigenen Anki-Deck übernehmen oder selbst schreiben (die Vorschläge liegen nur im privaten Daten-Repo als `kanji-vorschlaege.json`, nicht in der App), Strichfolge als Animation (Strich für Strich, der aktuelle rot); Abfrage vom Schlüsselwort zum Kanji – mit dem Finger auf die Zeichenfläche zeichnen (die App vergleicht Strichzahl, Form, Lage, Richtung und Reihenfolge grob mit KanjiVG und schlägt eine Bewertung vor) oder auf Papier schreiben und aufdecken. Neue Rahmen pro Tag einstellbar, bereits Gelerntes übernehmbar. In den Wortdetails der Geschichten steht nur zur Info, welche Rahmen die Kanji eines Wortes haben
-- **Profil** – bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Abgleich über GitHub, Kana-Übung
+- **Profil** – Kacheln mit Statistik (die meisten führen per Klick in ihre Rubrik), bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Abgleich über GitHub, Kana-Übung
+- **Top 2000** (über das Profil) – die 2000 häufigsten lernbaren Wörter des Japanischen mit Lesung und Bedeutung, eingefärbt nach Lernstand (gefestigt, Lernkartei, Merkliste, in Geschichten noch offen, noch in keiner Geschichte); als Raster in Blöcken zu 250 mit Filter oder als **Wandteppich**: ein Holzschnitt unter 2000 Fäden in Rangfolge, das Motiv ist kaum zu erahnen – gefestigte Wörter zeigen ihren Faden in voller Farbe, Wörter in der Lernkartei als Ahnung (Motiv wählbar). Wörter, die in keiner Geschichte vorkommen, lassen sich direkt als bekannt markieren
 
 **Abgleich zwischen Handy und Computer:** Der Lernstand kann automatisch über ein *privates* GitHub-Repo
 (hier `binjeru/binjeru-daten`, Datei `lernstand.json`) abgeglichen werden. Dafür auf
@@ -49,6 +50,7 @@ js/strokes.js    lädt und animiert Strichfolgen (KanjiVG)
 js/kanji-draw.js Zeichenfläche der Kanji-Abfrage und grober Abgleich mit den KanjiVG-Strichen
 js/heisig.js     Heisig-Kartei: Reihenfolge, Freischalten, Wiederholung (ohne UI)
 js/kanji-view.js Oberfläche der Kanji-Rubrik
+js/top-words.js  Top 2000: Liste laden, Lernstand zuordnen, Raster und Wandteppich
 js/shadow.js     Shadowing: Satzauswahl, Wiedergabe-Schleife mit Nachsprech-Pausen, Zähler
 js/player.js     Geschichtenplayer + Wortdetails
 js/app.js        Navigation und übrige Ansichten
@@ -65,7 +67,8 @@ js/app.js        Navigation und übrige Ansichten
 
 ## Quellen und Lizenzen
 
-- **Häufigkeitsränge** (`data/frequency.js`): Leeds Internet Corpus (Serge Sharoff, University of Leeds), Liste von [hingston/japanese](https://github.com/hingston/japanese), CC BY 2.5. Erzeugt mit `tools/build-frequency.ps1`.
+- **Häufigkeitsplätze** (`data/frequency.js`) und **Top 2000** (`data/top2000.js`): eine durchgehende Rangliste der lernbaren Wörter aus dem Leeds Internet Corpus (Serge Sharoff, University of Leeds), Liste von [hingston/japanese](https://github.com/hingston/japanese), CC BY 2.5 – Partikel, Hilfsverben und Wortbruchstücke mithilfe von JMdict herausgerechnet, sodass Merkliste, Wortdetails und Top 2000 dieselbe Nummer zeigen. Beide Dateien erzeugt `tools/build-top2000.ps1`.
+- **Top 2000** (`data/top2000.js`): Reihenfolge aus derselben Leeds-Liste (CC BY 2.5), Lesungen und Bedeutungen aus JMdict (CC BY-SA 4.0; die Datei steht deshalb unter CC BY-SA 4.0), erzeugt mit `tools/build-top2000.ps1`. Partikel, Hilfsverben und Wortbruchstücke sind herausgefiltert; bei sehr häufigen mehrdeutigen Wörtern ist die Bedeutung von Hand festgelegt.
 - **Kanji-Daten** (`data/kanji.js`): [KANJIDIC2](https://www.edrdg.org/wiki/index.php/KANJIDIC_Project) der EDRDG, CC BY-SA 4.0 – Heisig-Nummern der 6. Auflage (2200 Zeichen, entspricht der deutschen Ausgabe bei Klostermann), Strichzahl, Lesungen.
 - **Strichfolgen** (`data/strokes/`): [KanjiVG](https://kanjivg.tagaini.net) von Ulrich Apel, CC BY-SA 3.0.
   Kanji-Daten und Strichfolgen werden mit `tools/build-kanji.ps1` erzeugt; für diese Dateien gilt die jeweilige Share-Alike-Lizenz.
@@ -106,6 +109,6 @@ Jede Geschichte ist eine eigene Datei und wird erst geladen, wenn sie gebraucht 
 2. Den Text als `data/stories/<id>.js` anlegen: `Content.register({ id, scenes: [...], dict: {...} })`.
    Wörter im Satz werden mit `|` getrennt (vorbereitete Wortsegmente), z. B. `"手紙|に|は|「|秘密|の|約束|」|と|書いて|ありました|。"`.
 3. Jedes Wort braucht einen Wörterbucheintrag – entweder im gemeinsamen `data/dictionary.js` oder im `dict`-Abschnitt der Geschichte (siehe `momotaro.js`). Gebeugte Formen zeigen mit `base` auf ihre Grundform.
-4. Die Datei in `tests.html` einbinden; die Tests melden fehlende Einträge. Danach `tools/build-frequency.ps1` laufen lassen, damit neue Wörter einen Häufigkeitsrang bekommen.
+4. Die Datei in `tests.html` einbinden; die Tests melden fehlende Einträge. Danach `tools/build-top2000.ps1` laufen lassen, damit neue Wörter einen Häufigkeitsplatz bekommen.
 
 Die Bibliothek zeigt zu jeder Geschichte, welcher Anteil der Wörter schon bekannt ist oder in der Lernkartei liegt.
