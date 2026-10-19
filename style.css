@@ -97,6 +97,7 @@ button.primary.big { padding: 13px 26px; font-size: 1.05rem; }
 .secondary { border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 9px 16px; border-radius: 10px; text-decoration: none; display: inline-block; font-size: .95rem; cursor: pointer; }
 .secondary:hover:not(:disabled) { border-color: var(--accent); }
 .secondary.danger { color: var(--bad); }
+.secondary.on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 button.link { border: 0; background: none; color: var(--muted); text-decoration: underline; padding: 4px; font-size: .9rem; }
 .icon-btn { border: 0; background: none; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); font-size: 1.1rem; }
 .icon-btn:hover { background: var(--bg); color: var(--text); }
@@ -336,6 +337,9 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .flash-meaning { font-size: 1.5rem; font-weight: 600; margin: 6px 0; }
 .flash-ex { background: var(--bg); border-radius: 12px; padding: 10px 16px; margin: 16px 0 4px; }
 .flash-ex .jp { font-size: 1.2rem; line-height: 2.1; margin: 0; }
+/* vor dem Aufdecken sind die Wörter im Satz nicht antippbar */
+.flash:not(.revealed) .flash-ex .tok { cursor: default; }
+.flash:not(.revealed) .flash-ex .tok:hover { background: none; }
 .rate-row { margin-top: 20px; }
 
 /* ---------- Kanji (Heisig) ---------- */

@@ -420,6 +420,7 @@ const WordSheet = (() => {
     }
     render();
     Player.refreshStatus();
+    document.dispatchEvent(new CustomEvent("wordstatus"));   // z. B. Lernkarte frischt ihren Satz auf
   });
   backdrop.addEventListener("click", close);
 

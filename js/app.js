@@ -325,8 +325,8 @@ const Check = (() => {
 // ---------- Lernkartei ----------
 const Deck = (() => {
   let S = null; // { mode: "due" | "practice", queue, revealed, done, good, again }
-  const BOX_HELP = ["", "täglich · Furigana · Aussprache automatisch", "nach 2 Tagen · Furigana · Audio auf Knopfdruck",
-    "nach 5 Tagen · ohne Furigana", "nach 14 Tagen · ohne Furigana", "nach 35 Tagen, dann alle 90 Tage"];
+  const BOX_HELP = ["", "täglich · Furigana · Aussprache automatisch", "nach 2 Tagen · Furigana",
+    "nach 5 Tagen · Furigana auf Knopfdruck", "nach 14 Tagen · Furigana auf Knopfdruck", "nach 35 Tagen, dann alle 90 Tage · Furigana auf Knopfdruck"];
 
   function renderOverview() {
     const now = Date.now();
@@ -402,7 +402,8 @@ const Deck = (() => {
     const card = Store.db.cards.find(c => c.id === S.queue[0]);
     const vid = card.vocabId, v = DICT[vid];
     const box = Scheduler.boxOf(card);
-    const furi = box <= 2;
+    // Furigana: Fach 1–2 immer, ab Fach 3 auf Knopfdruck (wird beim Bewerten mitprotokolliert)
+    const furi = box <= 2 || !!S.showFuri;
     const s = sentenceFor(card);
     el.innerHTML = `
       <div class="session-top">
@@ -416,15 +417,18 @@ const Deck = (() => {
           <div class="flash-reading"><span class="jp">${v.r}</span> · ${escapeHtml(v.ro || kanaToRomaji(v.r))}</div>
           <div class="flash-meaning">${escapeHtml(v.de)}</div>` : ""}
         ${s ? `<div class="flash-ex">
-          <p class="jp">${Content.sentenceHtml(s, { highlight: vid, furigana: furi || S.revealed })}</p>
+          <p class="jp">${Content.sentenceHtml(s, S.revealed
+            ? { highlight: vid, furigana: true, statusOf: Store.status, tabbable: true }   // aufgedeckt: Wörter antippbar
+            : { highlight: vid, furigana: furi })}</p>
           ${S.revealed ? `<p class="de">${escapeHtml(s.de)}</p>` : ""}
         </div>` : ""}
         <div class="row center">
           <button class="secondary" data-act="say-word">🔊 Wort</button>
           ${s ? `<button class="secondary" data-act="say-sentence">▶ Satz</button>` : ""}
+          ${box >= 3 && !S.revealed ? `<button class="secondary ${S.showFuri ? "on" : ""}" data-act="furi" aria-pressed="${!!S.showFuri}">${S.showFuri ? "ふ Furigana aus" : "ふ Furigana"}</button>` : ""}
           ${S.revealed && s && Store.gateOpen() ? `<button class="secondary" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">↗ Zur Geschichte</button>` : ""}
         </div>
-        ${S.revealed && s ? `<p class="hint center">Aus <span class="jp">${storyTitle(s.storyId)}</span> · Szene ${s.sceneIndex + 1}</p>` : ""}
+        ${S.revealed && s ? `<p class="hint center">Aus <span class="jp">${storyTitle(s.storyId)}</span> · Szene ${s.sceneIndex + 1} · Wort im Satz antippen = Details &amp; Merkliste</p>` : ""}
         <div class="row center rate-row">
           ${S.revealed ? `
             <button class="rate bad" data-act="again">Noch nicht <kbd>1</kbd></button>
@@ -441,15 +445,19 @@ const Deck = (() => {
     rating === "good" ? S.good++ : S.again++;
     if (S.mode === "due") {
       const box = Store.db.cards.find(c => c.id === id).box;
-      Store.review(id, rating, { furigana: box <= 2, autoAudio: box === 1 });
+      Store.review(id, rating, { furigana: box <= 2 || !!S.showFuri, autoAudio: box === 1 });
     } else {
       // Üben: nicht gewusste Karten kommen nach ein paar anderen nochmal
       Store.practice(id, rating);
       if (rating === "again") S.queue.splice(Math.min(3, S.queue.length), 0, id);
     }
     S.revealed = false;
+    S.showFuri = false;
     renderSession(true);
   }
+
+  // Nach einer Änderung in den Wortdetails (Merkliste, bekannt) die Markierungen im Satz auffrischen
+  document.addEventListener("wordstatus", () => { if (currentView === "deck" && S && S.queue.length && S.revealed) renderSession(false); });
 
   // Beim Öffnen des Tabs: laufende Einheit fortsetzen, abgeschlossene → Übersicht
   RENDER.deck = () => {
@@ -458,10 +466,14 @@ const Deck = (() => {
   };
 
   $("#deck").addEventListener("click", e => {
+    // Nach dem Aufdecken: Wort im Beispielsatz antippen → Wortdetails mit „Zur Merkliste“
+    const tok = e.target.closest(".flash.revealed .tok[data-k]");
+    if (tok) { WordSheet.open(tok.dataset.k, tok.dataset.sid); return; }
     const act = e.target.closest("[data-act]");
     if (!act) return;
     const card = S && S.queue.length ? Store.db.cards.find(c => c.id === S.queue[0]) : null;
     switch (act.dataset.act) {
+      case "furi": S.showFuri = !S.showFuri; renderSession(false); break;
       case "start-due": start("due"); break;
       case "start-practice": start("practice"); break;
       case "reveal": S.revealed = true; renderSession(false); break;
