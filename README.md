@@ -18,6 +18,7 @@ Für die Sprachausgabe braucht der Browser eine japanische Stimme – in Edge un
 - **Wortschatz-Check** – nach einer Geschichte: Wort zeigen, überlegen, aufdecken; „Gewusst“ = bekannt, „Nicht gewusst“ = Merkliste
 - **Merkliste** – gesammelte Wörter mit Beispielsatz und Herkunft; nach Häufigkeitsrang sortiert; höchstens 12 Karten pro Tag in Fach 1 (Rückfälle zählen mit)
 - **Lernkartei** – 5 Fächer wie eine echte Lernkartei: *Kennenlernen* (Furigana, Aussprache automatisch), *Aufbau* (Furigana, Audio auf Knopfdruck), *Festigen*, *Vertiefen* (ohne Furigana), *Langzeit*. Jeden Tag zuerst die **Tagesabfrage** – erst danach sind Geschichten und neue Wörter freigeschaltet. Von jeder Karte zurück zur Stelle in der Geschichte
+- **Shadowing** – Sätze hören und in der Pause laut nachsprechen: Quelle wählen (Fach 1–5, alle Lernkarten, Merkliste oder eine Geschichte), einzelne Sätze an- oder abwählen, Wiederholungen pro Satz (1–10), Pause (2–8 s, mindestens Satzlänge + 0,5 s) und Tempo einstellen. Die Sätze laufen in Schleife, bis man stoppt; Text, Furigana und Übersetzung zuschaltbar, der Bildschirm bleibt an. Zähler, wie oft jeder Satz gehört wurde (heute / insgesamt)
 - **Kanji** – eigenständige Heisig-Kartei („Die Kanji lernen und behalten 1“, 2200 Rahmen): Rahmen strikt in Heisigs Reihenfolge freischalten, Schlüsselwort und Merkgeschichte als Vorschlag aus dem eigenen Anki-Deck übernehmen oder selbst schreiben (die Vorschläge liegen nur im privaten Daten-Repo als `kanji-vorschlaege.json`, nicht in der App), Strichfolge als Animation (Strich für Strich, der aktuelle rot); Abfrage vom Schlüsselwort zum Kanji – mit dem Finger auf die Zeichenfläche zeichnen (die App vergleicht Strichzahl, Form, Lage, Richtung und Reihenfolge grob mit KanjiVG und schlägt eine Bewertung vor) oder auf Papier schreiben und aufdecken. Neue Rahmen pro Tag einstellbar, bereits Gelerntes übernehmbar. In den Wortdetails der Geschichten steht nur zur Info, welche Rahmen die Kanji eines Wortes haben
 - **Profil** – bekannte/aktive/gemerkte Wörter, Hörstatistik, Themen, Sicherung (Export/Import), Abgleich über GitHub, Kana-Übung
 
@@ -48,6 +49,7 @@ js/strokes.js    lädt und animiert Strichfolgen (KanjiVG)
 js/kanji-draw.js Zeichenfläche der Kanji-Abfrage und grober Abgleich mit den KanjiVG-Strichen
 js/heisig.js     Heisig-Kartei: Reihenfolge, Freischalten, Wiederholung (ohne UI)
 js/kanji-view.js Oberfläche der Kanji-Rubrik
+js/shadow.js     Shadowing: Satzauswahl, Wiedergabe-Schleife mit Nachsprech-Pausen, Zähler
 js/player.js     Geschichtenplayer + Wortdetails
 js/app.js        Navigation und übrige Ansichten
 ```

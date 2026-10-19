@@ -8,6 +8,7 @@ let currentView = "today";
 
 function showView(name) {
   if (name !== "player") Player.pause();
+  if (name !== "shadow" && Shadow.playing) Shadow.stop();   // Shadowing läuft nur in seiner Ansicht
   WordSheet.close();
   currentView = name;
   $$(".view").forEach(v => v.classList.toggle("active", v.id === `view-${name}`));
@@ -702,6 +703,7 @@ $("#profile").addEventListener("change", e => {
 
 RENDER.kana = () => KanaPractice.refresh();
 RENDER.kanji = () => KanjiView.render();
+RENDER.shadow = () => Shadow.render();
 
 // ---------- Tastatur ----------
 document.addEventListener("keydown", e => {
@@ -712,6 +714,7 @@ document.addEventListener("keydown", e => {
   else if (currentView === "deck") Deck.onKey(e);
   else if (currentView === "kana") KanaPractice.onKey(e);
   else if (currentView === "kanji") KanjiView.onKey(e);
+  else if (currentView === "shadow") Shadow.onKey(e);
 });
 
 // ---------- Start ----------

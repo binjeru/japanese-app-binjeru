@@ -461,7 +461,7 @@ textarea.text-input { resize: vertical; }
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; justify-content: space-around; gap: 0;
     background: var(--surface); border-top: 1px solid var(--border); padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
   }
-  .tabs button { flex-direction: column; gap: 0; padding: 6px 2px; border-radius: 10px; font-size: .68rem; flex: 1; min-width: 0; }
+  .tabs button { flex-direction: column; gap: 0; padding: 6px 2px; border-radius: 10px; font-size: .6rem; letter-spacing: -.02em; flex: 1; min-width: 0; padding-left: 1px; padding-right: 1px; overflow: hidden; text-overflow: ellipsis; }
   .tabs .ti { font-size: 1.15rem; }
   main { padding: 20px 16px 96px; }
   h1 { font-size: 1.6rem; }
@@ -500,3 +500,33 @@ button.primary, .segmented button.active { border-radius: 6px; }
 /* Niveau-Label als Hanko-Stempel */
 .level-badge { font-family: var(--serif); border: 1.5px solid currentColor; border-radius: 3px; padding: 3px 6px; transform: rotate(-3deg); }
 .kicker { font-family: var(--serif); letter-spacing: .12em; }
+
+/* ---------- Shadowing ---------- */
+.sh-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 16px; }
+.sh-settings .field { margin-bottom: 14px; }
+.sh-list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.sh-list { list-style: none; margin: 0; padding: 0; max-height: 420px; overflow-y: auto; }
+.sh-list li { border-bottom: 1px solid var(--border); }
+.sh-list label { display: flex; gap: 10px; align-items: flex-start; padding: 8px 2px; cursor: pointer; }
+.sh-list input { width: 18px; height: 18px; margin-top: 4px; accent-color: var(--accent); flex: none; }
+.sh-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sh-text .jp { font-size: 1.05rem; }
+.sh-text small { color: var(--muted); }
+.sh-count { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+.shadow-play { text-align: center; }
+.sh-status { display: flex; justify-content: center; gap: 6px 18px; flex-wrap: wrap; color: var(--muted); font-size: .88rem; }
+.sh-phase { font-family: var(--serif); font-size: 1.5rem; font-weight: 700; margin: 14px 0 8px; }
+.phase-speak .sh-phase { color: var(--accent); }
+.phase-paused .sh-phase { color: var(--muted); }
+.sh-bar { height: 5px; background: var(--l0); border-radius: 3px; overflow: hidden; max-width: 420px; margin: 0 auto 18px; }
+.sh-bar span { display: block; height: 100%; width: 0; background: var(--accent); }
+.phase-listen .sh-bar span { width: 100%; background: var(--good); opacity: .35; }
+.phase-speak .sh-bar span { animation: sh-countdown linear forwards; }
+@keyframes sh-countdown { from { width: 100%; } to { width: 0; } }
+.sh-sentence { font-size: 1.6rem; line-height: 2.2; margin: 6px 0; }
+.sh-de { color: var(--muted); margin: 0 0 8px; }
+.sh-hidden { color: var(--muted); font-style: italic; margin: 24px 0; }
+.sh-controls .primary.big { min-width: 150px; }
+.sh-toggles { gap: 6px 18px; font-size: .92rem; }
+.sh-toggles label { display: flex; align-items: center; gap: 6px; }
+@media (max-width: 640px) { .sh-sentence { font-size: 1.3rem; } }
