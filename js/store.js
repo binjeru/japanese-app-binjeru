@@ -17,7 +17,7 @@ const Store = (() => {
     kana: {},          // Kana-Übungsstatistik
     // Heisig-Kanji: eigene Kartei. frames: Rahmen → { keyword, story }; unlocked: höchster freigeschalteter Rahmen
     heisig: { frames: {}, cards: [], reviews: [], unlocked: 0, activations: {}, newPerDay: 10 },
-    prefs: { furi: true, romaji: false, de: false, speed: "1", mode: "read", topics: [] },
+    prefs: { furi: true, kanji: true, romaji: false, de: false, speed: "1", mode: "read", topics: [] },
     currentStoryId: null,
   });
 

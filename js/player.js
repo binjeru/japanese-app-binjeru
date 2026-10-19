@@ -67,6 +67,7 @@ const Player = (() => {
         </div>
         <div class="pl-options">
           <div class="segmented small" id="pl-mode"><button data-v="listen">🎧 Hören</button><button data-v="read">📖 Lesen</button></div>
+          <label title="Wörter, die in der Geschichte in Kana stehen, mit Kanji anzeigen (wie in der Lernkartei)"><input type="checkbox" data-pref="kanji"> 漢字</label>
           <label><input type="checkbox" data-pref="furi"> Furigana</label>
           <label><input type="checkbox" data-pref="romaji"> Romaji</label>
           <label><input type="checkbox" data-pref="de"> Deutsch</label>
@@ -76,7 +77,12 @@ const Player = (() => {
     modeSeg = segmented($("#pl-mode", root), prefs().mode, v => { prefs().mode = v; Store.persist(); applyPrefs(); });
     $$("[data-pref]", root).forEach(box => {
       box.checked = prefs()[box.dataset.pref];
-      box.addEventListener("change", () => { prefs()[box.dataset.pref] = box.checked; Store.persist(); applyPrefs(); });
+      box.addEventListener("change", () => {
+        prefs()[box.dataset.pref] = box.checked;
+        Store.persist();
+        if (box.dataset.pref === "kanji") { Content.setKanjiMode(box.checked); P.scene = -1; setCurrent(P.idx); }   // Text neu aufbauen
+        applyPrefs();
+      });
     });
     updateVoiceHint();
   }

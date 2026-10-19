@@ -719,6 +719,8 @@ document.addEventListener("keydown", e => {
 
 // ---------- Start ----------
 // Nur die Geschichten laden, die der Lernstand gerade braucht (aktuelle Geschichte, Karten, Merkliste)
+// Kanji statt Kana in Sätzen (Einstellung im Player, standardmässig an)
+Content.setKanjiMode(Store.db.prefs.kanji !== false);
 Content.ensure([
   Store.db.currentStoryId || Content.catalog[0].id,
   ...Store.db.cards.map(c => Content.storyIdOf(c.sentenceId)),

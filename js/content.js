@@ -119,6 +119,37 @@ const Content = (() => {
     return line.charAt(0).toUpperCase() + line.slice(1);
   }
 
+  // ---------- Kanji statt Kana in der Anzeige ----------
+  // Viele einfache Geschichten schreiben Wörter in Kana (そと), die Lernkartei zeigt sie mit Kanji (外).
+  // Mit eingeschaltetem Kanji-Modus zeigen auch die Sätze die Kanji-Schreibweise aus dem Wörterbuch (k),
+  // gebeugte Formen inklusive (みました → 見ました). Die Geschichtendateien bleiben unverändert.
+  // Ausgenommen: Wörter, die man üblicherweise in Kana schreibt, Originaltexte (Aozora) und Wörter mit
+  // Kanji außerhalb der 2200 Heisig-Kanji (z. B. 鞄, 嬉しい – im Alltag meist in Kana).
+  const KANA_PREFERRED = new Set(["こと", "もの", "ところ", "わけ", "ころ", "できる", "よい", "うち", "おいしい", "むかしむかし"]);
+  let kanjiMode = true;
+  const commonKanji = s => typeof Heisig === "undefined" || [...s].filter(c => isKanji(c) && c !== "々").every(c => Heisig.byKanji(c));
+  function kanjiSurface(t, storyId) {
+    const k = kanjiCandidate(t, storyId);
+    return k && commonKanji(k.s) ? k : null;
+  }
+  function kanjiCandidate(t, storyId) {
+    if (!kanjiMode || isKanji(t)) return null;
+    const m = meta(storyId);
+    if (m && m.sourceType === "aozora") return null;
+    const w = DICT[t];
+    if (!w) return null;
+    if (w.k && !KANA_PREFERRED.has(t)) return { s: w.k, r: w.r || t };
+    const b = w.base && DICT[w.base];
+    if (!b || !b.k || KANA_PREFERRED.has(w.base) || isKanji(w.base)) return null;
+    // Grundform zerlegen: Kanji-Teil + Okurigana (見る/みる → 見 + る, 楽しい/たのしい → 楽 + しい)
+    const bk = [...b.k], br = [...(b.r || w.base)];
+    let suf = 0;
+    while (suf < bk.length && suf < br.length && bk[bk.length - 1 - suf] === br[br.length - 1 - suf]) suf++;
+    const kanjiPart = bk.slice(0, bk.length - suf).join(""), kanaPart = br.slice(0, br.length - suf).join("");
+    if (!kanaPart || !t.startsWith(kanaPart)) return null;   // z. B. くる → きました: Stamm ändert sich
+    return { s: kanjiPart + t.slice(kanaPart.length), r: t };
+  }
+
   // Satz als HTML; Wörter antippbar. opts: { highlight: vocabId, furigana: bool, statusOf: fn }
   function sentenceHtml(s, opts = {}) {
     return s.tokens.map((t, ti) => {
@@ -128,7 +159,9 @@ const Content = (() => {
       const cls = ["tok"];
       if (opts.highlight && vid === opts.highlight) cls.push("target");
       if (opts.statusOf && isLearnable(vid)) cls.push(`st-${opts.statusOf(vid)}`);
-      const inner = opts.furigana === false ? escapeHtml(t) : furiganaHtml(t, w.r);
+      const kj = kanjiSurface(t, s.storyId);
+      const inner = kj ? (opts.furigana === false ? escapeHtml(kj.s) : furiganaHtml(kj.s, kj.r))
+        : opts.furigana === false ? escapeHtml(t) : furiganaHtml(t, w.r);
       return `<span class="${cls.join(" ")}" data-k="${escapeHtml(t)}" data-sid="${s.id}" data-ti="${ti}"${opts.tabbable ? ' tabindex="0"' : ""}>${inner}</span>`;
     }).join("");
   }
@@ -184,5 +217,6 @@ const Content = (() => {
     story: id => storiesById[id] || null, sentence: id => sentences[id] || null,
     vocab, vocabIdOf, display, reading, isLearnable, sayText, globalFreq, rank, byRank,
     romajiLine, sentenceHtml, storyVocab, coverage, firstSentenceAny, audioUrl,
+    setKanjiMode: on => { kanjiMode = !!on; }, kanjiSurface,
   };
 })();
