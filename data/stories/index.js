@@ -14,6 +14,13 @@ const STORY_CATALOG = [
     art: { src: "data/art/himitsu.jpg", pos: "35% 30%", credit: "Kitagawa Utamaro, „Junge Frau, einen Brief lesend“, um 1793/94 (Metropolitan Museum of Art, CC0)" },
   },
   {
+    id: "izakaya", titleJp: "はじめての居酒屋", titleDe: "Das erste Izakaya",
+    description: "Luca, 33, aus Zürich, geht am ersten Abend in Tokio essen: Oshibori, Wasser gratis, Speisekarte nur auf Japanisch, Garnelenallergie, ein Otōshi, das niemand bestellt hat – und Trinkgeld, das niemand will.",
+    level: "N5", genre: "Alltag · Restaurant", icon: "食", sourceType: "curated", source: "Eigene Geschichte",
+    audio: { path: "data/audio/izakaya/", credit: "VOICEVOX:夜語トバリ" },
+    art: { src: "data/art/izakaya.jpg", pos: "22% 70%", credit: "Utagawa Hiroshige, „Restaurant Kawachiya in Yanagibashi, Ryōgoku“ aus „Berühmte Restaurants von Edo“, um 1835/40 (Rijksmuseum, CC0)" },
+  },
+  {
     id: "momotaro", titleJp: "ももたろう", titleDe: "Momotarō, der Pfirsichjunge",
     description: "Das berühmteste Märchen Japans: Ein Junge, geboren aus einem Pfirsich, zieht mit Hund, Affe und Fasan zur Dämoneninsel.",
     level: "N5", genre: "Märchen", icon: "桃", sourceType: "curated", source: "Eigene Nacherzählung des japanischen Volksmärchens (gemeinfrei)",
