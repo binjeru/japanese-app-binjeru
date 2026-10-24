@@ -373,7 +373,8 @@ const Deck = (() => {
 
   // mode "due": Pflichtabfrage der fälligen Karten · "practice": Fach 1 frei üben (ohne Wirkung)
   function start(mode = "due") {
-    const cards = mode === "practice" ? shuffle(Store.practiceCards()) : Store.dueQueue();
+    // Welche Karten drankommen, bestimmt der Scheduler; die Reihenfolge ist zufällig
+    const cards = shuffle(mode === "practice" ? Store.practiceCards() : Store.dueQueue());
     if (!cards.length) { toast(mode === "practice" ? "In Fach 1 ist heute nichts zu üben." : "Gerade ist keine Karte fällig."); renderOverview(); return; }
     S = { mode, queue: cards.map(c => c.id), revealed: false, done: 0, good: 0, again: 0 };
     renderSession(true);

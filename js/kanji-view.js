@@ -163,7 +163,8 @@ const KanjiView = (() => {
   // ---------- Wiederholen (Schlüsselwort → Kanji) ----------
   // reviewMode "due": Tagesabfrage · "practice": Fach 1 frei üben (ohne Wirkung)
   function startReview(reviewMode = "due") {
-    const cards = reviewMode === "practice" ? shuffle(Heisig.practiceCards()) : Heisig.dueQueue();
+    // Welche Kanji drankommen, bestimmt der Scheduler; die Reihenfolge ist zufällig
+    const cards = shuffle(reviewMode === "practice" ? Heisig.practiceCards() : Heisig.dueQueue());
     if (!cards.length) { toast(reviewMode === "practice" ? "In Fach 1 ist heute nichts zu üben." : "Gerade ist kein Kanji fällig."); return; }
     show("review", { reviewMode, queue: cards.map(c => c.id), revealed: false, storyOpen: false, drawn: [], check: null, done: 0, good: 0, again: 0 });
   }
