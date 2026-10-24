@@ -202,10 +202,10 @@ const KanjiView = (() => {
               <figure><div class="kanji-stage">${KanjiDraw.svg(K.drawn, K.check)}</div><figcaption class="hint">Deine Zeichnung</figcaption></figure>
               <figure><div class="kanji-stage" id="k-stage"></div><figcaption class="hint">Richtig</figcaption></figure>
             </div>
-            <p class="draw-verdict ${K.check.verdict}">${escapeHtml(K.check.text)}${K.check.strokes.some(s => s.reason) ? `<br><small>${K.check.strokes.map((s, i) => s.reason ? `Strich ${i + 1}: ${escapeHtml(s.reason)}` : "").filter(Boolean).join(" · ")}</small>` : ""}</p>`
+            <p class="draw-verdict ${K.check.verdict}">${escapeHtml(K.check.text)}</p>`
             : `<div class="kanji-stage" id="k-stage"></div>`}
           <div class="row center"><button class="secondary" data-k="replay">↻ Strichfolge</button><button class="secondary" data-k="edit">✎ Bearbeiten</button></div>
-          ${facts(k)}` : `
+          <details class="kanji-more"><summary>Striche &amp; Lesungen</summary>${facts(k)}</details>` : `
           <div class="draw-pad" id="k-pad"></div>
           <div class="row center draw-tools">
             <button class="secondary" data-k="undo">↶ Strich zurück</button>
