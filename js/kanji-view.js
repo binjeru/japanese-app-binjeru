@@ -205,7 +205,7 @@ const KanjiView = (() => {
             <p class="draw-verdict ${K.check.verdict}">${escapeHtml(K.check.text)}</p>`
             : `<div class="kanji-stage" id="k-stage"></div>`}
           <div class="row center"><button class="secondary" data-k="replay">↻ Strichfolge</button><button class="secondary" data-k="edit">✎ Bearbeiten</button></div>
-          <details class="kanji-more"><summary>Striche &amp; Lesungen</summary>${facts(k)}</details>` : `
+          <details class="fold"><summary>Striche &amp; Lesungen</summary>${facts(k)}</details>` : `
           <div class="draw-pad" id="k-pad"></div>
           <div class="row center draw-tools">
             <button class="secondary" data-k="undo">↶ Strich zurück</button>

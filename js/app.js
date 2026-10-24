@@ -421,7 +421,7 @@ const Deck = (() => {
           <div class="flash-meaning">${escapeHtml(v.de)}</div>` : ""}
         ${S.revealed && s ? `<div class="flash-ex">
           <p class="jp">${Content.sentenceHtml(s, { highlight: vid, furigana: true, statusOf: Store.status, tabbable: true })}</p>
-          <p class="de">${escapeHtml(s.de)}</p>
+          <details class="fold"><summary>Übersetzung</summary><p class="de">${escapeHtml(s.de)}</p></details>
         </div>` : ""}
         <div class="row center">
           <button class="secondary" data-act="say-word">🔊 Wort</button>
