@@ -49,7 +49,7 @@ const Games = (() => {
     const ps = Store.db.puzzle || { total: 0, perfect: 0 };
     const tile = (game, icon, title, text, info, ok) => `
       <button class="panel game-tile" data-game="${game}" ${ok ? "" : "disabled"}>
-        <span class="game-icon jp">${icon}</span>
+        ${tapestry({ id: `spiel-${game}`, icon }, 100, "small", false)}
         <span class="game-body"><b>${title}</b><span>${text}</span><small class="hint">${info}</small></span>
       </button>`;
     root.innerHTML = `

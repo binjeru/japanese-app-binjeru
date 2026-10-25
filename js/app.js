@@ -42,7 +42,8 @@ const storyTitle = id => { const s = Content.story(id); return s ? s.titleJp : "
 
 // Wandteppich: Bild der Geschichte, von unten nach oben „gewebt“ – so weit, wie du ihre Wörter kennst
 // (Anteil wie bei der Wortabdeckung). Ohne eigenes Bild: Wellenmuster (青海波) mit dem Kachel-Kanji.
-function tapestry(m, pct, size = "") {
+// seal: 完-Stempel bei fertig gewebtem Teppich (Spielkacheln zeigen ihn ohne)
+function tapestry(m, pct, size = "", seal = true) {
   const fill = Math.max(0, Math.min(100, pct || 0));
   const hue = [...m.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
   const art = m.art
@@ -51,7 +52,7 @@ function tapestry(m, pct, size = "") {
   const title = `${pct == null ? "" : `Gewebt: ${fill} % – so viele Wörter der Geschichte sitzen (als bekannt markiert oder ab Fach 4).`}${m.art ? `\nBild: ${m.art.credit}` : ""}`;
   return `<div class="tapestry ${size} ${fill >= 100 ? "done" : ""}" style="--fill:${fill}%" title="${escapeHtml(title)}">
       <div class="tp-cloth"><div class="tp-ghost">${art}</div><div class="tp-woven">${art}</div></div>
-      ${fill >= 100 ? `<span class="tp-seal jp" aria-label="fertig gewebt">完</span>` : ""}
+      ${fill >= 100 && seal ? `<span class="tp-seal jp" aria-label="fertig gewebt">完</span>` : ""}
     </div>`;
 }
 function fmtDue(t) {

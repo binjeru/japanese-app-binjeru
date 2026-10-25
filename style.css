@@ -398,8 +398,6 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .game-tile { display: flex; align-items: center; gap: 16px; text-align: left; width: 100%; margin: 0; cursor: pointer; color: var(--text); font: inherit; }
 .game-tile:hover:not(:disabled) { border-color: var(--accent); }
 .game-tile:disabled { opacity: .55; cursor: default; }
-.game-icon { font-size: 2rem; width: 56px; height: 56px; flex: none; display: grid; place-items: center; border-radius: 12px;
-  background: var(--accent-soft); color: var(--accent); }
 .game-body { display: flex; flex-direction: column; gap: 2px; }
 .game-body b { font-size: 1.05rem; }
 .mc { text-align: center; }
