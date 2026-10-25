@@ -393,6 +393,56 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .draw-verdict.good { color: var(--good); } .draw-verdict.close { color: var(--saved); } .draw-verdict.again { color: var(--bad); }
 .rate.suggest { outline: 3px solid currentColor; outline-offset: 2px; }
 .kanji-facts { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; font-size: .88rem; color: var(--muted); margin: 10px 0 16px; }
+/* Spiele */
+.game-tiles { display: grid; gap: 12px; }
+.game-tile { display: flex; align-items: center; gap: 16px; text-align: left; width: 100%; margin: 0; cursor: pointer; color: var(--text); font: inherit; }
+.game-tile:hover:not(:disabled) { border-color: var(--accent); }
+.game-tile:disabled { opacity: .55; cursor: default; }
+.game-icon { font-size: 2rem; width: 56px; height: 56px; flex: none; display: grid; place-items: center; border-radius: 12px;
+  background: var(--accent-soft); color: var(--accent); }
+.game-body { display: flex; flex-direction: column; gap: 2px; }
+.game-body b { font-size: 1.05rem; }
+.mc { text-align: center; }
+.mc-dir { margin-bottom: 14px; }
+.mc-dir button { font-size: .82rem; padding: 5px 10px; }
+.mc-prompt { font-size: 1.6rem; font-weight: 600; margin: 10px 0 4px; line-height: 1.8; }
+.mc-prompt.jp { font-size: 2.2rem; }
+.mc-listen { font-size: 2.2rem; width: 84px; height: 84px; border-radius: 50%; border: 1px solid var(--border); background: var(--bg); cursor: pointer; margin: 6px 0; }
+.mc-meaning { font-weight: 600; margin: 0 0 6px; }
+.mc-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.mc-option { display: flex; align-items: center; gap: 8px; text-align: left; padding: 12px; border-radius: 12px; min-height: 58px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; cursor: pointer; }
+.mc-option .jp { font-size: 1.25rem; }
+.mc-option kbd { opacity: .5; }
+.mc-option:hover:not(:disabled) { border-color: var(--accent); }
+.mc-option.right { border-color: var(--good); background: var(--good-soft); }
+.mc-option.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.mc-option.dim { opacity: .5; }
+.pairs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.pairs-col { display: flex; flex-direction: column; gap: 8px; }
+.pair { min-height: 56px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font: inherit; font-size: .92rem; cursor: pointer; transition: opacity .3s, background .2s; }
+.pair .jp { font-size: 1.25rem; }
+.pair.sel { border-color: var(--accent); background: var(--accent-soft); }
+.pair.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.pair.matched { border-color: var(--good); background: var(--good-soft); opacity: .45; cursor: default; }
+@media (max-width: 560px) { .mc-options { grid-template-columns: 1fr; } }
+
+/* Satzpuzzle */
+.pz { text-align: center; }
+.pz-line { min-height: 64px; display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-end; gap: 6px;
+  padding: 10px; border-bottom: 2px dashed var(--border); margin-bottom: 14px; }
+.pz-line .hint { align-self: center; }
+.pz-pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 6px 0 14px; min-height: 52px; }
+.pz-chip { font-family: var(--jp); font-size: 1.2rem; line-height: 1.9; padding: 2px 12px; border-radius: 10px; cursor: pointer;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border); box-shadow: 0 1px 0 var(--border); }
+.pz-chip:hover { border-color: var(--accent); }
+.pz-chip.wrong { border-color: var(--bad); background: var(--bad-soft); }
+.pz-chip .tok { pointer-events: none; }
+.pz-end { font-family: var(--jp); font-size: 1.2rem; line-height: 1.9; }
+.pz-verdict { font-weight: 600; margin: 4px 0 8px; }
+.pz-verdict.good { color: var(--good); } .pz-verdict.bad { color: var(--bad); }
+.pz-sentence { font-size: 1.3rem; line-height: 2.2; background: var(--bg); border-radius: 12px; padding: 8px 14px; margin: 8px 0; }
 .fold { text-align: center; margin: 4px 0 8px; }
 .fold summary { display: inline-block; cursor: pointer; font-size: .85rem; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; list-style: none; }
 .fold summary::-webkit-details-marker { display: none; }

@@ -2,7 +2,7 @@
 // Oberfläche: Navigation und Ansichten (Heute, Bibliothek, Merkliste, Wortschatz-Check, Lernkartei, Profil)
 
 // ---------- Navigation ----------
-const TAB_OF = { player: "library", check: "library", kana: "profile", top: "profile" };
+const TAB_OF = { player: "library", check: "library", kana: "profile", top: "profile", puzzle: "games" };
 const RENDER = {};
 let currentView = "today";
 
@@ -353,8 +353,7 @@ const Deck = (() => {
         ${head}
         <div class="row center">
           ${practice.length ? `<button class="secondary" data-act="start-practice">Fach 1 üben · ${practice.length} (zählt nicht)</button>` : ""}
-          ${!due.length && Store.db.saved.length && allowance ? `<button class="secondary" data-goto="saved">＋ Neue Karten aus der Merkliste (${allowance} frei)</button>` : ""}
-        </div>
+          ${!due.length && Store.db.saved.length && allowance ? `<button class="secondary" data-goto="saved">＋ Neue Karten aus der Merkliste (${allowance} frei)</button>` : ""}        </div>
       </div>
       <div class="boxes4 boxes5">${boxes.map((cards, i) => {
         const b = i + 1;
@@ -718,6 +717,8 @@ RENDER.kana = () => KanaPractice.refresh();
 RENDER.kanji = () => KanjiView.render();
 RENDER.shadow = () => Shadow.render();
 RENDER.top = () => TopWords.render();
+RENDER.puzzle = () => Puzzle.render();
+RENDER.games = () => Games.render();
 
 // ---------- Tastatur ----------
 document.addEventListener("keydown", e => {
@@ -729,6 +730,8 @@ document.addEventListener("keydown", e => {
   else if (currentView === "kana") KanaPractice.onKey(e);
   else if (currentView === "kanji") KanjiView.onKey(e);
   else if (currentView === "shadow") Shadow.onKey(e);
+  else if (currentView === "puzzle") Puzzle.onKey(e);
+  else if (currentView === "games") Games.onKey(e);
 });
 
 // ---------- Start ----------
