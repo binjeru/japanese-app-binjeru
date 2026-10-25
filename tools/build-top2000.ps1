@@ -157,6 +157,17 @@ foreach ($w in $words) {
   $line = "  [{0}, {1}, {2}, {3}, {4}]," -f $rank, (& $esc $w), (& $esc $r), (& $esc $de), (& $esc $ps)
   $out.Add($line)
 }
+# Nebenschreibweisen (温かい neben 暖かい) wurden oben als „nicht Hauptform“ übersprungen:
+# sie bekommen den Platz ihres JMdict-Eintrags, ohne die Rangliste zu verändern
+# (dieselben Schutzregeln wie oben: keine Bruchstücke, keine kurzen/reinen Kana-Formen ohne Häufigkeitsmarke)
+$viaAlt = @{}
+foreach ($f in @($index.Keys)) {
+  $i = $index[$f]
+  if ($placeOf.ContainsKey($f) -or -not $seqPlace.ContainsKey($i.seq) -or $fragments -contains $f) { continue }
+  if (($f.Length -eq 1 -or $f -match '^[ぁ-ゟ]+$') -and -not $i.prio) { continue }
+  $placeOf[$f] = $seqPlace[$i.seq]
+  $viaAlt[$f] = 1
+}
 $header = @"
 // Die $Count häufigsten lernbaren Wörter des Japanischen – automatisch erzeugt mit
 // tools/build-top2000.ps1, nicht von Hand bearbeiten. Felder: [Rang in der Häufigkeitsliste,
@@ -178,9 +189,13 @@ foreach ($line in ($files | ForEach-Object { [IO.File]::ReadAllLines($_, [Text.E
   if ($line -notmatch '^\s*"([^"]+)":\s*\{(.*)\},?\s*$') { continue }
   $key = $Matches[1]; $body = $Matches[2]
   if ($body -match 'base:' -or $freq.Contains($key)) { continue }
-  $p = $null
-  if ($body -match '\bk:\s*"([^"]+)"' -and $placeOf.ContainsKey($Matches[1])) { $p = $placeOf[$Matches[1]] }
-  elseif ($placeOf.ContainsKey($key)) { $p = $placeOf[$key] }
+  $p = $null; $form = $null
+  if ($body -match '\bk:\s*"([^"]+)"' -and $placeOf.ContainsKey($Matches[1])) { $form = $Matches[1] }
+  elseif ($placeOf.ContainsKey($key)) { $form = $key }
+  if ($form) { $p = $placeOf[$form] }
+  # Über eine Nebenschreibweise zugeordnet: nicht für Grammatikwörter (sonst bekäme die Partikel や den Platz
+  # eines gleich gelesenen Worts)
+  if ($form -and $viaAlt.ContainsKey($form) -and $body -match 'pos:\s*"(Partikel|Satzendpartikel|Kopula|Suffix|Hilfsverb)"') { $p = $null }
   if ($null -ne $p) { $freq[$key] = $p }
 }
 $fbody = ($freq.GetEnumerator() | ForEach-Object { '  "{0}": {1},' -f $_.Key, $_.Value }) -join "`n"
