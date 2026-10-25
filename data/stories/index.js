@@ -28,6 +28,27 @@ const STORY_CATALOG = [
     art: { src: "data/art/momotaro.jpg", pos: "72% 62%", credit: "Utagawa Toyoharu, „Momotarō und seine Tierfreunde besiegen die Dämonen“, spätes 18. Jahrhundert (gemeinfrei)" },
   },
   {
+    id: "issunboshi", titleJp: "いっすんぼうし", titleDe: "Issun-bōshi, der Daumenlange",
+    description: "Ein Junge, nicht größer als ein Daumen, fährt in einer Reisschale in die Hauptstadt – mit einer Nähnadel als Schwert und einem Dämon als Gegner.",
+    level: "N5", genre: "Märchen", icon: "寸", sourceType: "curated", source: "Eigene Nacherzählung des japanischen Volksmärchens (gemeinfrei)",
+    audio: { path: "data/audio/issunboshi/", credit: "VOICEVOX:夜語トバリ" },
+    art: { src: "data/art/issunboshi.jpg", pos: "48% 62%", credit: "Unbekannter Künstler, „Issun-bōshi“ aus dem Otogi-zōshi, um 1725 (National Diet Library, gemeinfrei)" },
+  },
+  {
+    id: "urashima", titleJp: "うらしまたろう", titleDe: "Urashima Tarō",
+    description: "Ein junger Fischer rettet eine Schildkröte und wird zum Dank in den Drachenpalast unter dem Meer eingeladen. Doch die Zeit dort vergeht anders …",
+    level: "N5", genre: "Märchen", icon: "亀", sourceType: "curated", source: "Eigene Nacherzählung des japanischen Volksmärchens (gemeinfrei)",
+    audio: { path: "data/audio/urashima/", credit: "VOICEVOX:夜語トバリ" },
+    art: { src: "data/art/urashima.jpg", pos: "42% 50%", credit: "Tsukioka Yoshitoshi, „Urashima kehrt heim“ (帰国浦島), 1882 (Los Angeles County Museum of Art, gemeinfrei)" },
+  },
+  {
+    id: "kasajizo", titleJp: "かさじぞう", titleDe: "Die Jizō mit den Strohhüten",
+    description: "Ein armer alter Mann kann an Silvester keinen einzigen Strohhut verkaufen – und schenkt sie den verschneiten Steinfiguren am Wegrand.",
+    level: "N5", genre: "Märchen", icon: "雪", sourceType: "curated", source: "Eigene Nacherzählung des japanischen Volksmärchens (gemeinfrei)",
+    audio: { path: "data/audio/kasajizo/", credit: "VOICEVOX:夜語トバリ" },
+    art: { src: "data/art/kasajizo.jpg", pos: "38% 70%", credit: "Utagawa Hiroshige, „Abendschnee in Kambara“ aus „Die 53 Stationen des Tōkaidō“, um 1833/34 (Los Angeles County Museum of Art, gemeinfrei)" },
+  },
+  {
     id: "tebukuro", titleJp: "手袋を買いに", titleDe: "Handschuhe kaufen",
     description: "Ein kleiner Fuchs soll mit einer verzauberten Menschenhand in der Stadt Handschuhe kaufen – und streckt die falsche Pfote hin. Eine der bekanntesten Erzählungen Japans, ungekürzt im Original.",
     level: "N3 · Originaltext", genre: "Literatur · Märchen", icon: "狐", sourceType: "aozora",
