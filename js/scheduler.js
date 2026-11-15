@@ -18,7 +18,7 @@ const Scheduler = (() => {
   const BOXES = 5;
   const INTERVALS = [0, 1, 2, 5, 14, 35];            // Tage bis zur Abfrage nach Eintritt ins Fach
   const LONG_TERM_INTERVAL = 90;                     // in Fach 5 gewusst → bleibt, wieder in 90 Tagen
-  const MAX_NEW_PER_DAY = 12;
+  const MAX_NEW_PER_DAY = 20;                        // lässt sich pro Tag übersteuern (Store.raiseLimit)
   const MAX_REVIEWS_PER_DAY = 50;                    // Obergrenze der Tagesabfrage (z. B. nach Pausen)
   const BOX_NAMES = ["", "Kennenlernen", "Aufbau", "Festigen", "Vertiefen", "Langzeit"];
 

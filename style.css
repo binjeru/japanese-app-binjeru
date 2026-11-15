@@ -309,6 +309,11 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .saved-ex { font-size: 1.05rem; line-height: 2; }
 .saved-ex-de { font-size: .88rem; color: var(--muted); font-style: italic; }
 .saved-tools { display: flex; flex-direction: column; }
+.saved-sort { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 12px; }
+.saved-group { margin-bottom: 18px; }
+.saved-group-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 6px 2px 8px; }
+.saved-group-head h3 { margin: 0; font-size: 1.05rem; }
+.saved-group-head small { font-weight: 400; color: var(--muted); }
 
 /* ---------- Lernkartei ---------- */
 .deck-head { text-align: center; }
@@ -327,6 +332,22 @@ button.rate.good { color: var(--good); } button.rate.good:hover { background: va
 .box4-due { font-size: .82rem; color: var(--accent); font-weight: 600; }
 .box4-help { font-size: .78rem; color: var(--muted); margin-top: 4px; }
 .box4-words { font-size: .95rem; margin-top: 8px; line-height: 1.7; word-break: keep-all; }
+/* Fächer der Wort-Lernkartei sind antippbar und klappen ihre Wortliste auf */
+button.box4 { font: inherit; color: inherit; text-align: left; cursor: pointer; transition: transform .1s, box-shadow .1s; }
+button.box4:hover { transform: translateY(-1px); }
+button.box4.open { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.box-list { margin-top: 12px; border-top: 6px solid var(--b1); }
+.box-list-2 { border-top-color: var(--b2); } .box-list-3 { border-top-color: var(--b3); } .box-list-4 { border-top-color: var(--b4); } .box-list-5 { border-top-color: var(--b5); }
+.box-list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.box-list-head h3 { margin: 0 0 8px; }
+.count { font-size: .8rem; font-weight: 600; color: var(--muted); background: var(--bg); border-radius: 999px; padding: 1px 8px; vertical-align: middle; }
+.box-words { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px; }
+.box-word { width: 100%; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "w de" "w meta"; column-gap: 12px; align-items: center; text-align: left; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+.box-word:hover { border-color: var(--accent); }
+.box-word > .jp { grid-area: w; font-size: 1.3rem; line-height: 1.7; }
+.box-word-de { grid-area: de; font-size: .9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.box-word-meta { grid-area: meta; font-size: .76rem; color: var(--muted); }
+.box-word-meta .lapses { color: var(--accent); font-weight: 600; }
 .session-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; max-width: 640px; margin-left: auto; margin-right: auto; }
 .flash { max-width: 640px; margin: 0 auto; text-align: center; }
 /* Fach-Markierung klein oben links, als eigene Zeile, damit sie auf schmalen Bildschirmen nichts überdeckt */

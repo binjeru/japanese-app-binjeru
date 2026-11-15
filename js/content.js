@@ -9,8 +9,9 @@ const Content = (() => {
 
   const vocabIdOf = key => (DICT[key] ? DICT[key].base || key : null);
   const vocab = id => DICT[id];
-  const display = id => DICT[id].k || id;           // Schreibweise auf Karten
-  const reading = id => DICT[id].r;
+  // Robust auch für Wörter einer noch nicht geladenen (eigenen) Geschichte
+  const display = id => (DICT[id] && DICT[id].k) || id;  // Schreibweise auf Karten
+  const reading = id => (DICT[id] ? DICT[id].r : id);
   const isLearnable = id => !NOT_LEARNABLE.has(DICT[id].pos);
   const sayText = key => DICT[key].say || DICT[key].r;
   // Häufigkeitsrang im Japanischen (null = nicht in der Liste)

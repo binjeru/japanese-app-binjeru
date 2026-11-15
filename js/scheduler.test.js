@@ -77,7 +77,7 @@ test("Üben zählt nicht für die Tagesgrenze", () => {
   eq(S.reviewsToday(deck, T0).length, 0); eq(S.gateOpen(deck, T0), false);
 });
 
-test("Neue Karten: 12 pro Tag minus heute aktivierte minus Rückfälle", () => {
+test("Neue Karten: Tageslimit minus heute aktivierte minus Rückfälle", () => {
   const deck = { cards: [], reviews: [], activations: { [S.dayKey(T0)]: 4 } };
   eq(S.allowance(deck, T0, 12), 8);
   deck.reviews.push({ reviewedAt: T0, rating: "again", boxBefore: 3, boxAfter: 1 });

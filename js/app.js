@@ -168,12 +168,46 @@ RENDER.saved = () => {
   const allowance = gate ? Store.newAllowance() : 0;
   const lapses = Store.lapsesToday();
   for (const vid of [...selected]) if (!Store.savedOf(vid)) selected.delete(vid);
+  const sort = Store.db.prefs.savedSort === "story" ? "story" : "rank";
   // Häufigste Wörter des Japanischen zuerst
   const list = [...Store.db.saved].sort((a, b) => Content.byRank(a.vocabId, b.vocabId) || b.savedAt - a.savedAt);
+  const limit = Store.dayLimit();
   let limitText = `Heute kannst du noch <b>${allowance}</b> ${allowance === 1 ? "neue Karte" : "neue Karten"} aktivieren.`;
   if (lapses) limitText += ` ${lapses} ${lapses === 1 ? "Platz ist" : "Plätze sind"} schon durch Karten belegt, die heute zurück in Fach 1 gefallen sind.`;
-  if (allowance === 0) limitText = "Für heute ist Fach 1 voll (12 Karten inklusive Rückfälle). Morgen geht es weiter.";
+  if (allowance === 0) limitText = `Für heute ist Fach 1 voll (${limit} Karten inklusive Rückfälle).`;
+  if (gate) limitText += ` <button class="link" data-act="raise">Limit heute um 5 erhöhen</button>`;
   if (!gate) limitText = `🔒 Erst die Tagesabfrage erledigen (${Store.dueQueue().length} fällig) – dann kannst du neue Karten aktivieren. <button class="link" data-goto-session>Tagesabfrage starten</button>`;
+
+  const item = it => {
+    const vid = it.vocabId;
+    const s = Content.sentence(it.sentenceId) || Content.firstSentenceAny(vid);
+    return `
+        <li class="saved-item ${selected.has(vid) ? "selected" : ""}">
+          <label class="saved-check"><input type="checkbox" data-vid="${escapeHtml(vid)}" ${selected.has(vid) ? "checked" : ""}></label>
+          <div class="saved-body">
+            <div><span class="saved-word jp">${wordHtml(vid)}</span> <span class="saved-de">${escapeHtml(DICT[vid].de)}</span>${rankBadge(vid)}</div>
+            ${s ? `<div class="saved-ex jp">${Content.sentenceHtml(s, { highlight: vid })}</div><div class="saved-ex-de">${escapeHtml(s.de)}</div>` : ""}
+            <div class="meta">${s ? `<a href="#" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">${storyTitle(s.storyId)} · Szene ${s.sceneIndex + 1}</a> · ` : ""}${it.source === "check" ? "Wortschatz-Check" : "markiert"}</div>
+          </div>
+          <div class="saved-tools">
+            <button class="icon-btn" data-say="${escapeHtml(vid)}" title="Anhören">🔊</button>
+            <button class="icon-btn" data-remove="${escapeHtml(vid)}" title="Aus der Merkliste entfernen">×</button>
+          </div>
+        </li>`;
+  };
+  let body;
+  if (sort === "story") {
+    // Nach Geschichte gruppiert (Reihenfolge wie in der Bibliothek), innerhalb nach Häufigkeit
+    const groups = savedByStory(list);
+    body = groups.map(g => `
+      <div class="saved-group">
+        <div class="saved-group-head">
+          <h3>${g.id ? `<span class="jp">${escapeHtml(g.titleJp)}</span> <small>${escapeHtml(g.titleDe)}</small>` : "Ohne Geschichte"} <span class="count">${g.items.length}</span></h3>
+          ${allowance ? `<button class="link" data-act="suggest-story" data-story="${escapeHtml(g.id)}">Diese auswählen</button>` : ""}
+        </div>
+        <ul class="saved-list">${g.items.map(item).join("")}</ul>
+      </div>`).join("");
+  } else body = `<ul class="saved-list">${list.map(item).join("")}</ul>`;
 
   $("#saved").innerHTML = list.length ? `
     <div class="panel saved-head">
@@ -183,29 +217,34 @@ RENDER.saved = () => {
         <button class="primary" data-act="activate" ${selected.size && allowance ? "" : "disabled"}>In die Lernkartei (${selected.size})</button>
       </div>
     </div>
-    <ul class="saved-list">${list.map(item => {
-      const vid = item.vocabId;
-      const s = Content.sentence(item.sentenceId) || Content.firstSentenceAny(vid);
-      return `
-        <li class="saved-item ${selected.has(vid) ? "selected" : ""}">
-          <label class="saved-check"><input type="checkbox" data-vid="${escapeHtml(vid)}" ${selected.has(vid) ? "checked" : ""}></label>
-          <div class="saved-body">
-            <div><span class="saved-word jp">${wordHtml(vid)}</span> <span class="saved-de">${escapeHtml(DICT[vid].de)}</span>${rankBadge(vid)}</div>
-            ${s ? `<div class="saved-ex jp">${Content.sentenceHtml(s, { highlight: vid })}</div><div class="saved-ex-de">${escapeHtml(s.de)}</div>` : ""}
-            <div class="meta">${s ? `<a href="#" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">${storyTitle(s.storyId)} · Szene ${s.sceneIndex + 1}</a> · ` : ""}${item.source === "check" ? "Wortschatz-Check" : "markiert"}</div>
-          </div>
-          <div class="saved-tools">
-            <button class="icon-btn" data-say="${escapeHtml(vid)}" title="Anhören">🔊</button>
-            <button class="icon-btn" data-remove="${escapeHtml(vid)}" title="Aus der Merkliste entfernen">×</button>
-          </div>
-        </li>`;
-    }).join("")}</ul>` : `
+    <div class="saved-sort"><span class="hint">Ordnen nach</span>
+      <div class="segmented small" id="saved-sort"><button data-v="rank">Häufigkeit</button><button data-v="story">Geschichte</button></div>
+    </div>
+    ${body}` : `
     <div class="panel empty">
       <p>Deine Merkliste ist noch leer.</p>
       <p class="hint">Tippe beim Hören oder Lesen auf ein Wort und wähle „Zur Merkliste“ – oder mache nach einer Geschichte den Wortschatz-Check.</p>
       <button class="primary" data-goto="library">Zu den Geschichten</button>
     </div>`;
+  if (list.length) segmented($("#saved-sort"), sort, v => { Store.db.prefs.savedSort = v; Store.persist(); RENDER.saved(); });
+  // Für die Gruppierung müssen alle Geschichten geladen sein
+  if (sort === "story" && Content.stories.length < Content.catalog.length) Content.loadAll().then(() => currentView === "saved" && RENDER.saved());
 };
+// Merkliste nach Geschichte gruppieren: Geschichte des gemerkten Satzes, sonst erstes Vorkommen
+function savedByStory(list) {
+  const groups = new Map();
+  for (const it of list) {
+    const s = Content.sentence(it.sentenceId) || Content.firstSentenceAny(it.vocabId);
+    const id = s ? s.storyId : (it.sentenceId ? it.sentenceId.split("/")[0] : "");
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(it);
+  }
+  const order = id => { const i = Content.catalog.findIndex(m => m.id === id); return i < 0 ? Infinity : i; };
+  return [...groups.entries()].sort((a, b) => order(a[0]) - order(b[0])).map(([id, items]) => {
+    const m = Content.catalog.find(x => x.id === id) || {};
+    return { id, titleJp: m.titleJp || id, titleDe: m.titleDe || "", items };
+  });
+}
 $("#saved").addEventListener("change", e => {
   const box = e.target.closest("input[data-vid]");
   if (!box) return;
@@ -231,6 +270,17 @@ $("#saved").addEventListener("click", e => {
     // Die im Japanischen häufigsten Wörter zuerst
     selected.clear();
     Store.db.saved.map(s => s.vocabId).sort(Content.byRank).slice(0, Store.newAllowance()).forEach(v => selected.add(v));
+    RENDER.saved();
+  } else if (act.dataset.act === "suggest-story") {
+    // Häufigste Wörter einer Geschichte, bis das Tageslimit erreicht ist
+    const list = [...Store.db.saved].sort((a, b) => Content.byRank(a.vocabId, b.vocabId) || b.savedAt - a.savedAt);
+    const g = savedByStory(list).find(x => x.id === act.dataset.story);
+    selected.clear();
+    if (g) g.items.slice(0, Store.newAllowance()).forEach(it => selected.add(it.vocabId));
+    RENDER.saved();
+  } else if (act.dataset.act === "raise") {
+    Store.raiseLimit(5);
+    toast(`Heute sind jetzt bis zu ${Store.dayLimit()} neue Karten möglich.`);
     RENDER.saved();
   } else if (act.dataset.act === "activate") {
     const n = Store.activate([...selected]);
@@ -330,6 +380,7 @@ const Check = (() => {
 // ---------- Lernkartei ----------
 const Deck = (() => {
   let S = null; // { mode: "due" | "practice", queue, revealed, done, good, again }
+  let openBox = 0; // Fach, dessen Wortliste in der Übersicht aufgeklappt ist
   const BOX_HELP = ["", "täglich", "nach 2 Tagen", "nach 5 Tagen", "nach 14 Tagen", "nach 35 Tagen, dann alle 90 Tage"];
 
   function renderOverview() {
@@ -360,15 +411,37 @@ const Deck = (() => {
         const b = i + 1;
         const dueN = cards.filter(c => Scheduler.isDue(c, now)).length;
         return `
-          <div class="box4 box4-${b}">
+          <button class="box4 box4-${b} ${openBox === b ? "open" : ""}" data-box="${b}" aria-expanded="${openBox === b}" title="Wörter in Fach ${b} anzeigen">
             <div class="box4-head"><b>Fach ${b}</b><span>${Scheduler.BOX_NAMES[b]}</span></div>
             <div class="box4-count">${cards.length}</div>
             <div class="box4-due">${dueN ? `${dueN} fällig` : "&nbsp;"}</div>
             <div class="box4-help">${BOX_HELP[b]}</div>
             <div class="box4-words">${cards.slice(0, 10).map(c => `<span class="jp">${escapeHtml(Content.display(c.vocabId))}</span>`).join(" ")}${cards.length > 10 ? ` +${cards.length - 10}` : ""}</div>
-          </div>`;
+          </button>`;
       }).join("")}</div>
+      ${openBox ? boxList(openBox, boxes[openBox - 1], now) : ""}
       ${Store.db.cards.length ? "" : `<p class="hint on-page">Noch keine Karten. Sammle Wörter in den Geschichten und aktiviere bis zu ${Scheduler.MAX_NEW_PER_DAY} pro Tag aus der Merkliste.</p>`}`;
+  }
+
+  // Wortliste eines Fachs: als Nächstes fällige zuerst
+  function boxList(b, cards, now) {
+    const list = [...cards].sort((x, y) => x.dueAt - y.dueAt || Content.byRank(x.vocabId, y.vocabId));
+    return `
+      <div class="panel box-list box-list-${b}" id="box-list">
+        <div class="box-list-head">
+          <h3>Fach ${b} · ${Scheduler.BOX_NAMES[b]} <span class="count">${list.length}</span></h3>
+          <button class="link" data-act="close-box">Schließen</button>
+        </div>
+        ${list.length ? `<ul class="box-words">${list.map(c => {
+          const v = DICT[c.vocabId] || {};
+          return `
+          <li><button class="box-word" data-vid="${escapeHtml(c.vocabId)}" data-sid="${escapeHtml(c.sentenceId || "")}">
+            <span class="jp">${wordHtml(c.vocabId)}</span>
+            <span class="box-word-de">${escapeHtml(v.de || "")}</span>
+            <span class="box-word-meta">${c.lapseCount ? `<span class="lapses" title="So oft aus einem höheren Fach zurückgefallen">↺ ${c.lapseCount}</span> ` : ""}${fmtDue(c.dueAt, now)}</span>
+          </button></li>`;
+        }).join("")}</ul>` : `<p class="hint">In diesem Fach liegen gerade keine Karten.</p>`}
+      </div>`;
   }
 
   // mode "due": Pflichtabfrage der fälligen Karten · "practice": Fach 1 frei üben (ohne Wirkung)
@@ -467,8 +540,24 @@ const Deck = (() => {
     // Nach dem Aufdecken: Wort im Beispielsatz antippen → Wortdetails mit „Zur Merkliste“
     const tok = e.target.closest(".flash.revealed .tok[data-k]");
     if (tok) { WordSheet.open(tok.dataset.k, tok.dataset.sid); return; }
+    // Übersicht: Fach antippen → Wortliste auf-/zuklappen, Wort antippen → Wortdetails
+    const boxBtn = e.target.closest("[data-box]");
+    if (boxBtn) {
+      const b = Number(boxBtn.dataset.box);
+      openBox = openBox === b ? 0 : b;
+      renderOverview();
+      if (openBox) $("#box-list").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+    const bw = e.target.closest(".box-word");
+    if (bw) {
+      const s = Content.sentence(bw.dataset.sid) || Content.firstSentenceAny(bw.dataset.vid);
+      WordSheet.open(bw.dataset.vid, s ? s.id : null);
+      return;
+    }
     const act = e.target.closest("[data-act]");
     if (!act) return;
+    if (act.dataset.act === "close-box") { openBox = 0; renderOverview(); return; }
     const card = S && S.queue.length ? Store.db.cards.find(c => c.id === S.queue[0]) : null;
     switch (act.dataset.act) {
       case "start-due": start("due"); break;

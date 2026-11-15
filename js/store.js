@@ -13,7 +13,8 @@ const Store = (() => {
     reviews: [],       // ReviewLog
     progress: {},      // storyId → { position, lastPlayedAt, listenCount, completedCount }
     activations: {},   // Datum → Anzahl aktivierter Karten
-    days: [],          // Tage mit Lernaktivität
+    extraNew: {},      // Datum → zusätzliche Plätze für neue Karten (Tageslimit übersteuert)
+    days: [],         // Tage mit Lernaktivität
     kana: {},          // Kana-Übungsstatistik
     // Heisig-Kanji: eigene Kartei. frames: Rahmen → { keyword, story }; unlocked: höchster freigeschalteter Rahmen
     heisig: { frames: {}, cards: [], reviews: [], unlocked: 0, activations: {}, newPerDay: 10 },
@@ -118,7 +119,14 @@ const Store = (() => {
   const dueTotal = (now = Date.now()) => Scheduler.dueTotal(deck(), now);
   const gateOpen = (now = Date.now()) => Scheduler.gateOpen(deck(), now);
   const practiceCards = (now = Date.now()) => Scheduler.practiceCards(deck(), now);
-  const newAllowance = (now = Date.now()) => Scheduler.allowance(deck(), now, Scheduler.MAX_NEW_PER_DAY);
+  const dayLimit = (now = Date.now()) => Scheduler.MAX_NEW_PER_DAY + (db.extraNew[Scheduler.dayKey(now)] || 0);
+  const newAllowance = (now = Date.now()) => Scheduler.allowance(deck(), now, dayLimit(now));
+  // Tageslimit für heute um n Plätze erhöhen; ältere Einträge werden dabei aufgeräumt
+  function raiseLimit(n, now = Date.now()) {
+    const key = Scheduler.dayKey(now);
+    db.extraNew = { [key]: (db.extraNew[key] || 0) + n };
+    persist();
+  }
 
   function activate(vids, now = Date.now()) {
     if (!gateOpen(now)) return 0; // erst die Tagesabfrage
@@ -211,7 +219,7 @@ const Store = (() => {
   return {
     get db() { return db; }, persist, onChange, touchDay,
     status, mastery, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
-    activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, activate, review, practice,
+    activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, dayLimit, raiseLimit, activate, review, practice,
     progress, setPosition, startedListening, completed, streak,
     exportJson, importJson, reset,
   };
