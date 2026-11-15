@@ -16,7 +16,8 @@ const Shadow = (() => {
   const MIN_GAP = 0.5;                 // Sekunden, die die Pause mindestens länger ist als der Satz
   const REPS = [1, 2, 3, 5, 10];
   const PAUSES = [2, 3, 5, 8];
-  const DEFAULTS = { source: "box1", reps: 3, pause: 3, speed: "1", showText: true, furi: true, de: false };
+  // favStory / favBox: Filter der Favoriten nach Geschichte bzw. Lernkartei-Fach ("" / 0 = alle)
+  const DEFAULTS = { source: "fav", reps: 3, pause: 3, speed: "1", showText: true, furi: true, de: false, favStory: "", favBox: 0 };
 
   const audio = new Audio();
   audio.preload = "auto";
@@ -24,20 +25,47 @@ const Shadow = (() => {
   let cancel = null;                   // bricht das aktuelle Abspielen / Warten ab
   let wakeLock = null;
 
-  const prefs = () => (Store.db.prefs.shadow = Object.assign({}, DEFAULTS, Store.db.prefs.shadow));
+  const prefs = () => {
+    // Fehlende Werte ergänzen, dasselbe Objekt behalten (sonst gingen Änderungen an älteren Verweisen verloren)
+    const p = (Store.db.prefs.shadow = Store.db.prefs.shadow || {});
+    for (const [k, v] of Object.entries(DEFAULTS)) if (!(k in p)) p[k] = v;
+    // Einmalig: Favoriten werden die Standardquelle (danach gilt, was man selbst wählt)
+    if (!p.favDefault) { p.favDefault = true; p.source = "fav"; }
+    return p;
+  };
   const stats = () => (Store.db.shadow = Object.assign({ plays: {}, days: {}, total: 0 }, Store.db.shadow));
 
   // ---------- Quellen ----------
   function sources() {
-    const out = [1, 2, 3, 4, 5].map(b => ({ id: `box${b}`, label: `Lernkartei · Fach ${b}` }));
+    const out = [{ id: "fav", label: "★ Favoriten" }];
+    out.push(...[1, 2, 3, 4, 5].map(b => ({ id: `box${b}`, label: `Lernkartei · Fach ${b}` })));
     out.push({ id: "cards", label: "Lernkartei · alle Fächer" }, { id: "saved", label: "Merkliste" });
     for (const m of Content.catalog) out.push({ id: `story:${m.id}`, label: `Geschichte · ${m.titleJp}` });
     return out;
   }
   const cardSentence = c => Content.sentence(c.sentenceId) || Content.firstSentenceAny(c.vocabId);
+
+  // Alle Lieblingssätze in Lesereihenfolge (Geschichten wie in der Bibliothek, darin nach Position)
+  function favorites() {
+    const order = id => { const i = Content.catalog.findIndex(m => m.id === id); return i < 0 ? Infinity : i; };
+    return Object.keys(Store.db.favorites).map(id => Content.sentence(id)).filter(Boolean)
+      .sort((a, b) => order(a.storyId) - order(b.storyId) || a.flatIndex - b.flatIndex);
+  }
+  // Fächer der Lernkartei-Wörter in einem Satz
+  function boxesIn(s) {
+    const boxOf = new Map(Store.db.cards.map(c => [c.vocabId, Scheduler.boxOf(c)]));
+    return new Set(s.vocabIds.filter(v => boxOf.has(v)).map(v => boxOf.get(v)));
+  }
+  // Favoriten nach Geschichte und/oder Fach gefiltert
+  function favFiltered() {
+    const p = prefs();
+    return favorites().filter(s => (!p.favStory || s.storyId === p.favStory) && (!p.favBox || boxesIn(s).has(p.favBox)));
+  }
+
   function sentencesOf(source) {
     let list = [];
-    if (source.startsWith("box")) list = Store.db.cards.filter(c => Scheduler.boxOf(c) === Number(source.slice(3))).map(cardSentence);
+    if (source === "fav") list = favFiltered();
+    else if (source.startsWith("box")) list = Store.db.cards.filter(c => Scheduler.boxOf(c) === Number(source.slice(3))).map(cardSentence);
     else if (source === "cards") list = Store.db.cards.map(cardSentence);
     else if (source === "saved") list = Store.db.saved.map(s => Content.sentence(s.sentenceId) || Content.firstSentenceAny(s.vocabId));
     else if (source.startsWith("story:")) { const st = Content.story(source.slice(6)); list = st ? st.flat : []; }
@@ -222,9 +250,10 @@ const Shadow = (() => {
         <p class="hint">Hören, dann in der Pause laut nachsprechen. Die Sätze laufen in Schleife, bis du stoppst – auch bei ausgeschaltetem Bildschirm, Steuerung dann auf dem Sperrbildschirm.</p>
         <div class="field"><label for="sh-source">Sätze aus</label>
           <select id="sh-source" class="text-input">${sources().map(o => {
-            const n = sentencesOf(o.id).length;
+            const n = o.id === "fav" ? favorites().length : sentencesOf(o.id).length;
             return `<option value="${o.id}" ${o.id === p.source ? "selected" : ""}>${escapeHtml(o.label)} (${n})</option>`;
           }).join("")}</select></div>
+        ${p.source === "fav" ? favFilters(p) : ""}
         <div class="sh-settings">
           <div class="field"><label>Wiederholungen pro Satz</label>
             <div class="segmented small" id="sh-reps">${REPS.map(n => `<button data-v="${n}">${n}×</button>`).join("")}</div></div>
@@ -245,13 +274,36 @@ const Shadow = (() => {
         ${all.length ? `<ul class="sh-list">${all.map(s => `
           <li><label>
             <input type="checkbox" data-sid="${s.id}" ${SH.excluded.has(s.id) ? "" : "checked"}>
-            <span class="sh-text"><span class="jp">${escapeHtml(s.text)}</span><small>${escapeHtml(s.de)}${Content.audioUrl(s) ? "" : " · 🔈 ohne Aufnahme (nur bei eingeschaltetem Bildschirm)"}</small></span>
+            <span class="sh-text"><span class="jp">${escapeHtml(s.text)}</span><small>${p.source === "fav" || p.source.startsWith("box") || p.source === "cards" || p.source === "saved" ? `${escapeHtml(Content.meta(s.storyId)?.titleJp || "")} · ` : ""}${escapeHtml(s.de)}${Content.audioUrl(s) ? "" : " · 🔈 ohne Aufnahme (nur bei eingeschaltetem Bildschirm)"}</small></span>
             <span class="sh-count" title="So oft beim Shadowing gehört">${st.plays[s.id] ? `${st.plays[s.id]}×` : ""}</span>
-          </label></li>`).join("")}</ul>` : `<p class="hint">Hier sind noch keine Sätze. Wähle oben eine andere Quelle.</p>`}
+          </label>${favBtn(s.id)}</li>`).join("")}</ul>`
+          : p.source === "fav" && favorites().length ? `<p class="hint">Keine Favoriten passen zu diesem Filter.</p>`
+          : p.source === "fav" ? `<p class="hint">Noch keine Favoriten. Markiere Sätze mit ☆ – beim Lesen einer Geschichte, im Hörmodus oder auf der Lernkarte nach dem Aufdecken.</p>`
+          : `<p class="hint">Hier sind noch keine Sätze. Wähle oben eine andere Quelle.</p>`}
       </div>`;
+    if (p.source === "fav") {
+      segmented($("#sh-favbox", root), String(p.favBox), v => { p.favBox = Number(v); SH.excluded.clear(); Store.persist(); renderSetup(); });
+    }
     segmented($("#sh-reps", root), String(p.reps), v => { p.reps = Number(v); Store.persist(); });
     segmented($("#sh-pause", root), String(p.pause), v => { p.pause = Number(v); Store.persist(); });
     segmented($("#sh-speed", root), p.speed, v => { p.speed = v; Store.persist(); });
+  }
+
+  // Filter für die Favoriten: Geschichte (nur solche mit Favoriten) und Lernkartei-Fach, kombinierbar
+  function favFilters(p) {
+    const favs = favorites();
+    const stories = Content.catalog.filter(m => favs.some(s => s.storyId === m.id));
+    if (p.favStory && !stories.some(m => m.id === p.favStory)) p.favStory = "";
+    return `
+      <div class="sh-filters">
+        <div class="field"><label for="sh-favstory">Geschichte</label>
+          <select id="sh-favstory" class="text-input">
+            <option value="">Alle Geschichten (${favs.length})</option>
+            ${stories.map(m => `<option value="${m.id}" ${m.id === p.favStory ? "selected" : ""}>${escapeHtml(m.titleJp)} · ${escapeHtml(m.titleDe)} (${favs.filter(s => s.storyId === m.id).length})</option>`).join("")}
+          </select></div>
+        <div class="field"><label>Mit Wörtern aus Fach</label>
+          <div class="segmented small" id="sh-favbox"><button data-v="0">Alle</button>${[1, 2, 3, 4, 5].map(b => `<button data-v="${b}">${b}</button>`).join("")}</div></div>
+      </div>`;
   }
 
   function renderPlaying() {
@@ -297,11 +349,16 @@ const Shadow = (() => {
   root.addEventListener("change", e => {
     const t = e.target;
     if (t.id === "sh-source") { prefs().source = t.value; SH.excluded.clear(); Store.persist(); renderSetup(); }
+    else if (t.id === "sh-favstory") { prefs().favStory = t.value; SH.excluded.clear(); Store.persist(); renderSetup(); }
     else if (t.dataset.sid) { t.checked ? SH.excluded.delete(t.dataset.sid) : SH.excluded.add(t.dataset.sid); renderSetup(); }
     else if (t.dataset.pref) { prefs()[t.dataset.pref] = t.checked; Store.persist(); renderPlaying(); }
   });
   // Beim Ausschalten des Bildschirms und beim Zurückkehren: gesammelte Zähler abgleichen
   document.addEventListener("visibilitychange", flush);
+  // Favorit entfernt/hinzugefügt: Auswahlliste der Favoriten neu aufbauen
+  document.addEventListener("favorites", () => {
+    if (currentView === "shadow" && !SH.playing && prefs().source === "fav") renderSetup();
+  });
 
   function onKey(e) {
     if (!SH.playing) return;

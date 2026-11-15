@@ -12,6 +12,7 @@ const Store = (() => {
     cards: [],         // Flashcard (siehe Scheduler.newCard)
     reviews: [],       // ReviewLog
     progress: {},      // storyId → { position, lastPlayedAt, listenCount, completedCount }
+    favorites: {},     // Satz-ID → Zeitpunkt, an dem der Satz als Favorit markiert wurde
     activations: {},   // Datum → Anzahl aktivierter Karten
     extraNew: {},      // Datum → zusätzliche Plätze für neue Karten (Tageslimit übersteuert)
     days: [],         // Tage mit Lernaktivität
@@ -161,6 +162,16 @@ const Store = (() => {
     persist();
   }
 
+  // ---------- Lieblingssätze (fürs Shadowing) ----------
+  const isFav = sid => !!db.favorites[sid];
+  function toggleFav(sid) {
+    if (db.favorites[sid]) delete db.favorites[sid];
+    else db.favorites[sid] = Date.now();
+    persist();
+    document.dispatchEvent(new CustomEvent("favorites"));
+    return isFav(sid);
+  }
+
   // ---------- Geschichten-Fortschritt ----------
   function progress(storyId) {
     return db.progress[storyId] || { position: 0, lastPlayedAt: null, listenCount: 0, completedCount: 0 };
@@ -220,6 +231,7 @@ const Store = (() => {
     get db() { return db; }, persist, onChange, touchDay,
     status, mastery, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
     activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, dayLimit, raiseLimit, activate, review, practice,
+    isFav, toggleFav,
     progress, setPosition, startedListening, completed, streak,
     exportJson, importJson, reset,
   };

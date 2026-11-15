@@ -31,6 +31,25 @@ document.addEventListener("click", e => {
 });
 
 const wordHtml = (vid, furigana = true) => furiganaHtml(Content.display(vid), Content.reading(vid));
+// Stern zum Markieren eines Satzes als Favorit (für das Shadowing); wirkt überall gleich
+const favBtn = (sid, label = false) => {
+  const on = Store.isFav(sid);
+  return `<button class="fav-btn ${on ? "on" : ""}" data-fav="${escapeHtml(sid)}" aria-pressed="${on}" title="${on ? "Aus den Favoriten entfernen" : "Als Favorit markieren (fürs Shadowing)"}">${on ? "★" : "☆"}${label ? ` <span>${on ? "Favorit" : "Als Favorit"}</span>` : ""}</button>`;
+};
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fav]");
+  if (!b) return;
+  e.preventDefault();
+  const on = Store.toggleFav(b.dataset.fav);
+  // alle Sterne desselben Satzes auf der Seite nachziehen
+  $$(`[data-fav="${CSS.escape(b.dataset.fav)}"]`).forEach(x => {
+    x.classList.toggle("on", on);
+    x.setAttribute("aria-pressed", on);
+    x.title = on ? "Aus den Favoriten entfernen" : "Als Favorit markieren (fürs Shadowing)";
+    x.innerHTML = `${on ? "★" : "☆"}${x.querySelector("span") ? ` <span>${on ? "Favorit" : "Als Favorit"}</span>` : ""}`;
+  });
+  toast(on ? "★ Als Favorit markiert – beim Shadowing unter „Favoriten“" : "Aus den Favoriten entfernt");
+});
 // Platz in der Häufigkeitsrangliste der lernbaren Wörter – dieselbe Nummer wie in der Übersicht „Top 2000“
 const rankBadge = vid => {
   const r = Content.rank(vid);
@@ -498,7 +517,7 @@ const Deck = (() => {
         </div>` : ""}
         <div class="row center">
           <button class="secondary" data-act="say-word">🔊 Wort</button>
-          ${S.revealed && s ? `<button class="secondary" data-act="say-sentence">▶ Satz</button>` : ""}
+          ${S.revealed && s ? `<button class="secondary" data-act="say-sentence">▶ Satz</button>${favBtn(s.id, true)}` : ""}
           ${S.revealed && s && Store.gateOpen() ? `<button class="secondary" data-open-story="${s.storyId}" data-pos="${s.flatIndex}">↗ Zur Geschichte</button>` : ""}
         </div>
         ${S.revealed && s ? `<p class="hint center">Aus <span class="jp">${storyTitle(s.storyId)}</span> · Szene ${s.sceneIndex + 1}</p>` : ""}

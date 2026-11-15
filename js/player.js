@@ -120,7 +120,10 @@ const Player = (() => {
       <h3 class="scene-title">${escapeHtml(scene.title)}</h3>
       <ol class="sents">${scene.sentences.map(s => `
         <li class="sent" data-idx="${s.flatIndex}">
-          <button class="say" data-say="${s.flatIndex}" title="Nur diesen Satz anhören" aria-label="Satz anhören">▶</button>
+          <div class="sent-tools">
+            <button class="say" data-say="${s.flatIndex}" title="Nur diesen Satz anhören" aria-label="Satz anhören">▶</button>
+            ${favBtn(s.id)}
+          </div>
           <div class="sent-body">
             <p class="jp">${Content.sentenceHtml(s, { statusOf: Store.status, tabbable: true })}</p>
             <p class="ro">${escapeHtml(Content.romajiLine(s.tokens))}</p>
@@ -154,6 +157,7 @@ const Player = (() => {
       <div class="listen-actions">
         <button class="secondary" data-act="peek">${P.peek ? "Satz ausblenden" : "Aktuellen Satz zeigen"}</button>
         <button class="secondary" data-act="to-read">📖 Ganzen Text einblenden</button>
+        ${favBtn(s.id, true)}
       </div>`;
   }
 
