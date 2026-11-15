@@ -49,6 +49,13 @@ const STORY_CATALOG = [
     art: { src: "data/art/kasajizo.jpg", pos: "38% 70%", credit: "Utagawa Hiroshige, „Abendschnee in Kambara“ aus „Die 53 Stationen des Tōkaidō“, um 1833/34 (Los Angeles County Museum of Art, gemeinfrei)" },
   },
   {
+    id: "hoshinofue", titleJp: "ハルと星の笛", titleDe: "Haru und die Sternenflöte",
+    description: "Die Sterne verschwinden vom Himmel. Mit einer alten Flöte, einem Schwert und dem Glühwürmchen Hotaru zieht der Junge Haru los – durch den Tempel des Wassers, den Feuerberg und den Turm des Windes bis zum Schloss der Dunkelheit.",
+    level: "N5", genre: "Abenteuer · Fantasy", icon: "星", sourceType: "curated", source: "Eigene Geschichte",
+    audio: { path: "data/audio/hoshinofue/", credit: "VOICEVOX:雀松朱司" },
+    art: { src: "data/art/hoshinofue.jpg", pos: "40% 70%", credit: "Kobayashi Kiyochika, „Glühwürmchen bei Ochanomizu“, um 1880 (Los Angeles County Museum of Art, gemeinfrei)" },
+  },
+  {
     id: "tebukuro", titleJp: "手袋を買いに", titleDe: "Handschuhe kaufen",
     description: "Ein kleiner Fuchs soll mit einer verzauberten Menschenhand in der Stadt Handschuhe kaufen – und streckt die falsche Pfote hin. Eine der bekanntesten Erzählungen Japans, ungekürzt im Original.",
     level: "N3 · Originaltext", genre: "Literatur · Märchen", icon: "狐", sourceType: "aozora",

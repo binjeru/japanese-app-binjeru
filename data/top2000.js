@@ -942,6 +942,7 @@ const TOP_WORDS = [
   [1202, "歌", "うた", "Lied, Gesang, Ballade; Gedicht, Poesie", "Nomen"],
   [1204, "会場", "かいじょう", "Versammlungssaal, Versammlungshalle, Versammlungsraum", "Nomen"],
   [1205, "治療", "ちりょう", "behandeln,  (ärztliche)Behandlung, Therapie", "Nomen"],
+  [1206, "探し", "さがし", "(engl.) search, searching, looking for", "Nomen"],
   [1208, "すごい", "", "unheimlich, nicht geheuer, ungeheuer; fürchterlich, furchtbar, schr …", "Adjektiv"],
   [1209, "それでも", "", "aber, trotzdem, jedoch", "Konjunktion"],
   [1210, "電子", "でんし", "Elektron", "Nomen"],
@@ -1470,6 +1471,7 @@ const TOP_WORDS = [
   [1848, "英国", "えいこく", "England, Großbritannien, Vereinigtes Königreich", "Nomen"],
   [1852, "石", "こく", "Koku (Volumenmaßeinheit z.B. für Reis; rund 180 l); Koku, Maßeinhei …", "Nomen"],
   [1853, "それにしても", "", "(engl.) nevertheless, at any rate, even so", "Ausdruck"],
+  [1854, "お客", "おきゃく", "Gast, Kunde", "Nomen"],
   [1855, "就職", "しゅうしょく", "Finden einer Anstellung, Bekommen einer Arbeit, Amtsantritt", "Nomen"],
   [1856, "文書", "ぶんしょ", "Schriftstück, Aufzeichnung, Schrift; Dokument", "Nomen"],
   [1858, "派遣", "はけん", "Absendung, Abschickung, Abfertigung", "Nomen"],
@@ -2004,6 +2006,4 @@ const TOP_WORDS = [
   [2536, "監視", "かんし", "unter Kontrolle halten, patrouillieren; beaufsichtigen, Aufsicht fü …", "Nomen"],
   [2537, "リーダー", "", "Leser; Lesebuch, Fibel", "Nomen"],
   [2538, "認定", "にんてい", "anerkennen, beglaubigen, bestätigen; Genehmigung", "Nomen"],
-  [2539, "必ずしも", "かならずしも", "nicht immer", "Adverb"],
-  [2540, "文庫", "ぶんこ", "Bibliothek, Bibliothekszimmer, Bücherarchiv; Schreibkästchen, Schac …", "Nomen"],
 ];
