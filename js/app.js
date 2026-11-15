@@ -311,14 +311,36 @@ $("#saved").addEventListener("click", e => {
 
 // ---------- Wortschatz-Check ----------
 const Check = (() => {
-  let C = null; // { storyId, list, i, revealed, known, saved }
+  let C = null; // { storyId, list, i, revealed, known, saved, scene, next, first }
 
-  function start(storyId) {
-    Content.load(storyId).then(() => {
-      const list = Content.storyVocab(storyId).filter(v => Store.status(v) === "unknown");
-      C = { storyId, list, i: 0, revealed: false, known: 0, saved: 0 };
+  // Neue Wörter eines Kapitels (Szene), häufigste der Geschichte zuerst; dazu der erste Satz im Kapitel
+  function sceneWords(storyId, sceneIndex) {
+    const story = Content.story(storyId);
+    if (!story) return [];
+    const first = {};
+    for (const s of story.scenes[sceneIndex].sentences)
+      for (const v of s.vocabIds) if (v && !(v in first) && Content.isLearnable(v)) first[v] = s.id;
+    return Object.keys(first).filter(v => Store.status(v) === "unknown").sort((a, b) => story.freq[b] - story.freq[a])
+      .map(v => ({ vid: v, sid: first[v] }));
+  }
+
+  // opts.scene: nur die Wörter eines Kapitels (beim ersten Hören), opts.next: Satz, mit dem es danach weitergeht
+  function start(storyId, opts = {}) {
+    Content.load(storyId).then(story => {
+      let list, first = {};
+      if (opts.scene != null) {
+        const words = sceneWords(storyId, opts.scene);
+        list = words.map(w => w.vid);
+        words.forEach(w => (first[w.vid] = w.sid));
+      } else list = Content.storyVocab(storyId).filter(v => Store.status(v) === "unknown");
+      for (const v of list) first[v] = first[v] || story.firstSentence[v];
+      C = { storyId, list, i: 0, revealed: false, known: 0, saved: 0, scene: opts.scene ?? null, next: opts.next ?? null, first };
       showView("check");
     }).catch(e => toast(e.message));
+  }
+  // Abfrage beendet (fertig oder abgebrochen): Kapitel gilt als abgefragt
+  function closeScene() {
+    if (C && C.scene != null) Store.markSceneChecked(C.storyId, C.scene);
   }
 
   function render() {
@@ -329,6 +351,22 @@ const Check = (() => {
       return;
     }
     const story = Content.story(C.storyId);
+    const sceneLabel = C.scene != null ? `Kapitel ${C.scene + 1} von ${story.scenes.length} · ${escapeHtml(story.scenes[C.scene].title)}` : "";
+    if (C.i >= C.list.length && C.scene != null) {
+      closeScene();
+      const last = C.next == null;
+      el.innerHTML = `
+        <h2>${last ? "おわり – Geschichte fertig" : `Kapitel ${C.scene + 1} geschafft`}</h2>
+        <p class="hint">${sceneLabel}</p>
+        <p>${C.list.length ? `<b>${C.known}</b> Wörter kanntest du schon, <b>${C.saved}</b> sind jetzt in deiner Merkliste.` : "Keine neuen Wörter in diesem Kapitel."}</p>
+        <div class="row wrap">
+          ${last ? `${Store.db.saved.length ? `<button class="primary" data-goto="saved">Zur Merkliste</button>` : ""}
+            <button class="secondary" data-open-story="${story.id}" data-pos="0">Zurück zur Geschichte</button>`
+            : `<button class="primary big" data-act="continue">▶ Weiter mit Kapitel ${C.scene + 2}</button>
+            <button class="secondary" data-goto="saved">Zur Merkliste</button>`}
+        </div>`;
+      return;
+    }
     if (C.i >= C.list.length) {
       el.innerHTML = `
         <h2>Check abgeschlossen</h2>
@@ -341,11 +379,12 @@ const Check = (() => {
       return;
     }
     const vid = C.list[C.i];
-    const s = Content.sentence(story.firstSentence[vid]);
+    const s = Content.sentence(C.first[vid]);
     el.innerHTML = `
+      ${C.scene != null && C.i === 0 && !C.revealed ? `<p class="check-intro">Kapitel-Abfrage: die neuen Wörter aus <b>Kapitel ${C.scene + 1}</b>, bevor es weitergeht.</p>` : ""}
       <div class="check-top">
-        <span class="hint">Wort ${C.i + 1} von ${C.list.length} · <span class="jp">${story.titleJp}</span></span>
-        <button class="link" data-act="finish">Check beenden</button>
+        <span class="hint">Wort ${C.i + 1} von ${C.list.length} · <span class="jp">${story.titleJp}</span>${C.scene != null ? ` · Kapitel ${C.scene + 1}` : ""}</span>
+        <button class="link" data-act="finish">${C.scene != null ? "Überspringen" : "Check beenden"}</button>
       </div>
       <div class="progress"><div class="progress-bar" style="width:${(C.i / C.list.length) * 100}%"></div></div>
       <div class="check-word jp">${wordHtml(vid)}</div>
@@ -366,7 +405,7 @@ const Check = (() => {
   function answer(known) {
     const vid = C.list[C.i];
     if (known) { Store.setKnown(vid, true); C.known++; }
-    else if (Store.saveWord(vid, Content.story(C.storyId).firstSentence[vid], "check")) C.saved++;
+    else if (Store.saveWord(vid, C.first[vid], "check")) C.saved++;
     C.i++;
     C.revealed = false;
     render();
@@ -384,6 +423,7 @@ const Check = (() => {
       case "known": answer(true); break;
       case "unknown": answer(false); break;
       case "finish": C.i = C.list.length; render(); break;
+      case "continue": { const { storyId, next } = C; C = null; Player.resume(storyId, next); break; }
     }
   });
 
@@ -393,7 +433,7 @@ const Check = (() => {
     else if (C.revealed && e.key === "1") answer(false);
     else if (C.revealed && e.key === "2") answer(true);
   }
-  return { start, onKey };
+  return { start, onKey, sceneWords };
 })();
 
 // ---------- Lernkartei ----------

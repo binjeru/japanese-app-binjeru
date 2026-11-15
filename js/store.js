@@ -191,6 +191,17 @@ const Store = (() => {
     db.progress[storyId] = p;
     persist();
   }
+  // Kapitel-Abfrage beim ersten Hören: welche Szenen schon abgefragt (oder übersprungen) wurden
+  function needsSceneCheck(storyId, sceneIndex) {
+    const p = progress(storyId);
+    return !p.completedCount && !(p.checkedScenes || []).includes(sceneIndex);
+  }
+  function markSceneChecked(storyId, sceneIndex) {
+    const p = progress(storyId);
+    p.checkedScenes = [...new Set([...(p.checkedScenes || []), sceneIndex])];
+    db.progress[storyId] = p;
+    persist();
+  }
   function completed(storyId) {
     const p = progress(storyId);
     p.completedCount++;
@@ -232,7 +243,7 @@ const Store = (() => {
     status, mastery, setKnown, encounter, saveWord, unsave, savedOf, cardOf,
     activatedToday, lapsesToday, dueQueue, dueTotal, gateOpen, practiceCards, newAllowance, dayLimit, raiseLimit, activate, review, practice,
     isFav, toggleFav,
-    progress, setPosition, startedListening, completed, streak,
+    progress, needsSceneCheck, markSceneChecked, setPosition, startedListening, completed, streak,
     exportJson, importJson, reset,
   };
 })();

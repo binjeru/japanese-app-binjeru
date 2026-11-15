@@ -205,6 +205,20 @@ const Player = (() => {
       if (!P || run !== P.run) return;
       highlightWord(null);
       Store.encounter(s.vocabIds.filter(v => v && Content.isLearnable(v)));
+      // Erstes Hören einer Geschichte mit mehreren Kapiteln: am Ende jedes Kapitels dessen neue Wörter
+      // abfragen, bevor es weitergeht (danach geht es mit dem nächsten Kapitel weiter)
+      const next = P.story.flat[idx + 1];
+      const sceneEnd = !next || next.sceneIndex !== s.sceneIndex;
+      if (continuous && sceneEnd && P.story.scenes.length > 1 && Store.needsSceneCheck(P.story.id, s.sceneIndex)) {
+        if (Check.sceneWords(P.story.id, s.sceneIndex).length) {
+          P.playing = false;
+          updatePlayBtn();
+          if (!next) finish(false);
+          Check.start(P.story.id, { scene: s.sceneIndex, next: next ? next.flatIndex : null });
+          return;
+        }
+        Store.markSceneChecked(P.story.id, s.sceneIndex);
+      }
       if (continuous && idx + 1 < P.story.flat.length) {
         setTimeout(() => { if (P && run === P.run && P.playing) playFrom(idx + 1, true); }, hasAudio() ? 350 : 500);
         return;
@@ -255,9 +269,10 @@ const Player = (() => {
     Speech.play(u);
   }
 
-  function finish() {
+  function finish(show = true) {
     P.ended = true;
     Store.completed(P.story.id);
+    if (!show) return;
     const end = $("#pl-end", root);
     if (end) { end.classList.remove("hidden"); end.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
     if (prefs().mode === "listen") setMode("read");
@@ -339,7 +354,15 @@ const Player = (() => {
     audio.play().catch(() => Speech.say(s.text, RATE_BASE));
   }
 
-  return { open, pause, onKey, refreshStatus, playSentence };
+  // Nach der Kapitel-Abfrage: Geschichte am Anfang des nächsten Kapitels öffnen und weiterspielen
+  function resume(storyId, idx) {
+    Content.load(storyId).then(story => {
+      openLoaded(story, idx);
+      playFrom(idx);
+    }).catch(e => toast(e.message));
+  }
+
+  return { open, resume, pause, onKey, refreshStatus, playSentence };
 })();
 
 // Wortdetailansicht (Bottom-Sheet)

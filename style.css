@@ -293,6 +293,7 @@ rt { font-size: .5em; color: var(--muted); }
 
 /* ---------- Wortschatz-Check ---------- */
 .check { max-width: 640px; margin: 0 auto; }
+.check-intro { background: var(--accent-soft); border-radius: 10px; padding: 10px 14px; margin: 0 0 12px; }
 .check-top { display: flex; justify-content: space-between; align-items: center; }
 .check-word { font-size: 3.2rem; text-align: center; line-height: 1.6; margin: 20px 0 4px; }
 .check-ex { text-align: center; margin: 16px 0; }
